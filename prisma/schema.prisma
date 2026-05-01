@@ -1,0 +1,497 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Todo {
+  id        Int      @id @default(autoincrement())
+  title     String
+  createdAt DateTime @default(now())
+}
+
+// ─── OddsHarvester Models ──────────────────────────────────────────────────
+
+model ScrapeJob {
+  id          Int       @id @default(autoincrement())
+  source      String    @default("OddsHarvester") // OddsHarvester | FBref | ESPN | Sofascore | MatchHistory | Understat | ClubElo
+  command     String    // "upcoming" | "historic" | "schedule" | "team_stats" | ...
+  sport       String
+  markets     String    // comma-separated
+  league      String?
+  date        String?   // YYYYMMDD for upcoming
+  season      String?   // for historic
+  headless    Boolean   @default(true)
+  status      String    @default("pending") // pending | running | success | failed
+  output      String?   // raw stdout/stderr
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  matches     Match[]
+
+  @@index([source, status])
+}
+
+model Match {
+  id         Int        @id @default(autoincrement())
+  jobId      Int
+  sport      String
+  league     String?
+  homeTeam   String
+  awayTeam   String
+  matchDate  String?    // ISO date string from scrape
+  matchUrl   String?
+  homeScore  Int?
+  awayScore  Int?
+  createdAt  DateTime   @default(now())
+
+  job        ScrapeJob  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  odds       OddsEntry[]
+  stats              MatchStat[]
+  sources            MatchSource[]
+  modelPredictions   ModelPrediction[]
+  ensemblePredictions EnsemblePrediction[]
+  ticketLegs         TicketLeg[]
+}
+
+model OddsEntry {
+  id          Int    @id @default(autoincrement())
+  matchId     Int
+  market      String  // 1x2, btts, over_under, etc.
+  submarket   String? // e.g. over_under_2_5
+  bookmaker   String
+  oddsHome    Float?
+  oddsDraw    Float?
+  oddsAway    Float?
+  oddsOver    Float?
+  oddsUnder   Float?
+  oddsYes     Float?
+  oddsNo      Float?
+  createdAt   DateTime @default(now())
+
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}
+
+// ─── Ticket Builder Models ─────────────────────────────────────────────────
+
+model Ticket {
+  id                  Int      @id @default(autoincrement())
+  name                String?  // optional label e.g. "Weekend Acca"
+  currency            String   @default("€")
+  stake               Float    @default(10)
+  bankroll            Float    @default(1000)
+  selections          String   // JSON: TicketSelection[] (legacy; legs[] is canonical going forward)
+  combinedOdds        Float
+  combinedProbability Float
+  expectedValue       Float
+  potentialReturn     Float
+  createdAt           DateTime @default(now())
+
+  // v2 fields (Phase 0)
+  bankrollId          Int?
+  batchId             Int?
+  strategy            String?
+  status              String   @default("draft") // draft | placed | settled | void
+
+  bankrollRef         Bankroll?    @relation(fields: [bankrollId], references: [id], onDelete: SetNull)
+  batch               TicketBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  legs                TicketLeg[]
+  placements          BetPlacement[]
+  ledgerEntries       LedgerEntry[]
+
+  @@index([bankrollId, createdAt])
+  @@index([batchId])
+}
+
+// ─── Prediction Models ─────────────────────────────────────────────────────
+
+model PredictionSession {
+  id          Int      @id @default(autoincrement())
+  league      String
+  source      String   // "penaltyblog" | "sports-betting"
+  model       String   // e.g. "PoissonGoalsModel", "LogisticRegression"
+  config      String?  // JSON string of extra config
+  matchCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  predictions Prediction[]
+}
+
+model Prediction {
+  id                 Int      @id @default(autoincrement())
+  sessionId          Int
+  homeTeam           String
+  awayTeam           String
+  matchDate          String?
+  league             String?
+
+  homeWinProb        Float?
+  drawProb           Float?
+  awayWinProb        Float?
+  predictedGoalsHome Float?
+  predictedGoalsAway Float?
+  predictedOutcome   String?  // "1", "X", "2", "Over 2.5", "BTTS Yes"
+  confidence         Float?
+
+  // Derived markets (from Dixon-Coles grid)
+  dc1X               Float?
+  dcX2               Float?
+  dc12               Float?
+  dnbHome            Float?
+  dnbAway            Float?
+  over15             Float?
+  under15            Float?
+  over25             Float?
+  under25            Float?
+  over35             Float?
+  under35            Float?
+  bttsYes            Float?
+  bttsNo             Float?
+  ahHome             Float?
+  ahAway             Float?
+
+  // 1st Half markets (scaled from full-time Dixon-Coles grid)
+  htHomeWinProb      Float?
+  htDrawProb         Float?
+  htAwayWinProb      Float?
+  htGoalsHome        Float?
+  htGoalsAway        Float?
+  htDc1X             Float?
+  htDcX2             Float?
+  htDc12             Float?
+  htDnbHome          Float?
+  htDnbAway          Float?
+  htOver15           Float?
+  htUnder15          Float?
+  htOver25           Float?
+  htUnder25          Float?
+  htOver35           Float?
+  htUnder35          Float?
+  htBttsYes          Float?
+  htBttsNo           Float?
+  htAhHome           Float?
+  htAhAway           Float?
+
+  // 2nd Half markets (scaled from full-time Dixon-Coles grid)
+  shHomeWinProb      Float?
+  shDrawProb         Float?
+  shAwayWinProb      Float?
+  shGoalsHome        Float?
+  shGoalsAway        Float?
+  shDc1X             Float?
+  shDcX2             Float?
+  shDc12             Float?
+  shDnbHome          Float?
+  shDnbAway          Float?
+  shOver15           Float?
+  shUnder15          Float?
+  shOver25           Float?
+  shUnder25          Float?
+  shOver35           Float?
+  shUnder35          Float?
+  shBttsYes          Float?
+  shBttsNo           Float?
+  shAhHome           Float?
+  shAhAway           Float?
+
+  isValueBet         Boolean  @default(false)
+  valueBetMarket     String?
+  bookmakerOdds      Float?
+  expectedValue      Float?
+
+  actualOutcome      String?
+  isCorrect          Boolean?
+
+  createdAt          DateTime @default(now())
+  session            PredictionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// ─── Scraped Dataset (generic store for all scraping results) ──────────────
+
+model ScrapedDataset {
+  id        Int      @id @default(autoincrement())
+  source    String   // "OddsHarvester" | "ESPN" | "FBref" | "Sofascore" | "Understat" | "ClubElo" | "MatchHistory" | "SoFIFA" | "WhoScored"
+  operation String   // "schedule" | "team_stats" | "standings" | "shot_events" | "upcoming" | "historic" etc.
+  sport     String?  // for OddsHarvester
+  league    String?
+  season    String?
+  date      String?  // for ClubElo date-based queries
+  statType  String?  // for FBref/Understat stat_type
+  params    String?  // JSON: any extra params (team, match_id, etc.)
+  rowCount  Int      @default(0)
+  data      String   // JSON: the full rows array
+  summary   String?  // JSON: the summary object
+  createdAt DateTime @default(now())
+
+  @@index([source])
+  @@index([source, league, season])
+}
+
+// ─── Account & Bankroll (Phase 0) ──────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String?
+  passwordHash String?  // null for dev shim user
+  createdAt    DateTime @default(now())
+
+  bankrolls       Bankroll[]
+  predictionRuns  PredictionRun[]
+  sessions        Session[]
+}
+
+model Session {
+  id        String   @id // opaque cookie value (random hex)
+  userId    Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Bankroll {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  name          String
+  type          String   @default("paper") // real | paper | sandbox
+  currency      String   @default("EUR")
+  startBalance  Float    @default(1000)
+  balance       Float    @default(1000)
+  kellyFraction Float    @default(0.5)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookmakerAccounts BookmakerAccount[]
+  ledger            LedgerEntry[]
+  tickets           Ticket[]
+  ticketBatches     TicketBatch[]
+
+  @@index([userId])
+}
+
+model BookmakerAccount {
+  id           Int      @id @default(autoincrement())
+  bankrollId   Int
+  bookmaker    String
+  balance      Float    @default(0)
+  depositLimit Float?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  bankroll     Bankroll       @relation(fields: [bankrollId], references: [id], onDelete: Cascade)
+  placements   BetPlacement[]
+
+  @@index([bankrollId])
+}
+
+model LedgerEntry {
+  id           Int      @id @default(autoincrement())
+  bankrollId   Int
+  ticketId     Int?
+  placementId  Int?
+  kind         String   // deposit | withdraw | stake | win | loss | adjust
+  amount       Float
+  balanceAfter Float
+  notes        String?
+  ts           DateTime @default(now())
+
+  bankroll     Bankroll      @relation(fields: [bankrollId], references: [id], onDelete: Cascade)
+  ticket       Ticket?       @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  placement    BetPlacement? @relation(fields: [placementId], references: [id], onDelete: SetNull)
+
+  @@index([bankrollId, ts])
+}
+
+// ─── Match enrichment (Phase 0/2) ──────────────────────────────────────────
+
+model MatchStat {
+  id                 Int      @id @default(autoincrement())
+  matchId            Int
+  source             String   // fbref | sofascore | understat | espn | …
+  xgHome             Float?
+  xgAway             Float?
+  possessionHome     Float?
+  possessionAway     Float?
+  shotsHome          Int?
+  shotsAway          Int?
+  shotsOnTargetHome  Int?
+  shotsOnTargetAway  Int?
+  cornersHome        Int?
+  cornersAway        Int?
+  data               String?  // JSON: extra fields per source
+  createdAt          DateTime @default(now())
+
+  match              Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, source])
+  @@index([matchId])
+}
+
+model MatchSource {
+  id          Int      @id @default(autoincrement())
+  matchId     Int
+  source      String
+  externalId  String?
+  url         String?
+  lastSeen    DateTime @default(now())
+
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, source])
+  @@index([source, externalId])
+}
+
+// ─── Prediction v2: ensemble (Phase 0/3) ───────────────────────────────────
+
+model PredictionRun {
+  id          Int       @id @default(autoincrement())
+  userId      Int?
+  league      String?
+  windowStart DateTime?
+  windowEnd   DateTime?
+  source      String    // ensemble | single
+  modelKey    String?   // null when source=ensemble
+  status      String    @default("pending") // pending | running | success | failed
+  error       String?
+  createdAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  user                 User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  modelPredictions     ModelPrediction[]
+  ensemblePredictions  EnsemblePrediction[]
+
+  @@index([userId, createdAt])
+}
+
+model ModelPrediction {
+  id          Int      @id @default(autoincrement())
+  runId       Int
+  matchId     Int
+  modelKey    String
+  market      String   // 1x2 | btts | ou_2_5 | ah_-0.5 | …
+  outcome     String   // home | draw | away | yes | no | over | under | …
+  probability Float
+  raw         String?  // JSON of model-specific extra fields
+  createdAt   DateTime @default(now())
+
+  run         PredictionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  match       Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([runId, matchId])
+  @@index([matchId, market, outcome])
+}
+
+model EnsemblePrediction {
+  id                 Int      @id @default(autoincrement())
+  runId              Int
+  matchId            Int
+  market             String
+  outcome            String
+  probability        Float
+  weights            String   // JSON: {modelKey: weight}
+  contributingModels String   // JSON: list of modelKeys included
+  createdAt          DateTime @default(now())
+
+  run                PredictionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  match              Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([runId, matchId])
+  @@index([matchId, market, outcome])
+}
+
+// ─── Ticket v2 (Phase 0/4) ─────────────────────────────────────────────────
+
+model TicketBatch {
+  id          Int      @id @default(autoincrement())
+  bankrollId  Int
+  name        String?
+  strategy    String   // highest-prob | highest-odds | highest-ev | value | kelly | edge-conf | weighted-rand | arbitrage
+  params      String?  // JSON: strategy params + diversity config
+  ticketCount Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  bankroll    Bankroll @relation(fields: [bankrollId], references: [id], onDelete: Cascade)
+  tickets     Ticket[]
+
+  @@index([bankrollId, createdAt])
+}
+
+model TicketLeg {
+  id            Int      @id @default(autoincrement())
+  ticketId      Int
+  matchId       Int?     // null when match record was deleted (kept for audit)
+  homeTeam      String
+  awayTeam      String
+  matchDate     String?
+  sport         String?
+  league        String?
+  market        String
+  submarket     String?
+  outcome       String
+  label         String
+  odds          Float
+  bookmaker     String
+  modelProb     Float?
+  kellyFraction Float?
+  legResult     String?  // pending | won | lost | void
+  createdAt     DateTime @default(now())
+
+  ticket        Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  match         Match?   @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
+  @@index([matchId])
+}
+
+model BetPlacement {
+  id                 Int      @id @default(autoincrement())
+  ticketId           Int
+  bookmakerAccountId Int
+  externalRef        String?
+  stake              Float
+  status             String   @default("placed") // placed | settled | void | error
+  placedAt           DateTime @default(now())
+
+  ticket             Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  bookmakerAccount   BookmakerAccount @relation(fields: [bookmakerAccountId], references: [id], onDelete: Cascade)
+  settlement         Settlement?
+  ledger             LedgerEntry[]
+
+  @@index([ticketId])
+}
+
+model Settlement {
+  id           Int      @id @default(autoincrement())
+  placementId  Int      @unique
+  outcome      String   // won | lost | void
+  returnAmount Float    @default(0)
+  profitLoss   Float    @default(0)
+  settledAt    DateTime @default(now())
+  notes        String?
+
+  placement    BetPlacement @relation(fields: [placementId], references: [id], onDelete: Cascade)
+}
+
+// ─── Phase 6: Scheduled jobs ───────────────────────────────────────────────
+
+model ScheduledJob {
+  id          Int       @id @default(autoincrement())
+  name        String
+  kind        String    // scrape_upcoming | scrape_history | predict_ensemble | arbitrage_scan
+  cron        String
+  payload     String?   // JSON of args for the kind
+  isEnabled   Boolean   @default(true)
+  lastRunAt   DateTime?
+  lastStatus  String?   // success | failed | running
+  lastError   String?
+  runCount    Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  @@index([isEnabled])
+}

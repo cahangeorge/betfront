@@ -1,0 +1,23 @@
+---
+import Layout from '#/layouts/Layout.astro';
+import { AccountPanel } from '#/components/AccountPanel';
+---
+
+<Layout title="Betfront — Account">
+  <main class="page-wrap px-4 pb-12 pt-10">
+    <div class="mx-auto max-w-6xl space-y-6">
+      <div class="page-header">
+        <p class="island-kicker mb-2">Account &amp; Bankrolls</p>
+        <h1 class="display-title text-3xl font-bold text-[var(--sea-ink)]">
+          Account
+        </h1>
+        <p class="mt-2 max-w-3xl text-[var(--sea-ink-soft)] leading-relaxed">
+          Manage bankrolls, bookmaker accounts, and the financial ledger
+          backing every ticket and prediction run.
+        </p>
+      </div>
+
+      <AccountPanel client:load />
+    </div>
+  </main>
+</Layout>

@@ -1,0 +1,24 @@
+---
+import Layout from '#/layouts/Layout.astro';
+import { AuthForm } from '#/components/AuthForm';
+
+if (Astro.locals.user) return Astro.redirect('/');
+
+const next = new URL(Astro.request.url).searchParams.get('next') ?? '/';
+---
+
+<Layout title="Betfront — Sign up">
+  <main class="page-wrap px-4 pb-12 pt-16">
+    <div class="mx-auto max-w-md space-y-6">
+      <div class="text-center">
+        <p class="island-kicker mb-2">Get started</p>
+        <h1 class="display-title text-3xl font-bold text-[var(--sea-ink)]">Create your account</h1>
+        <p class="mt-2 text-[var(--sea-ink-soft)]">Free, private, single-user — your data stays on this server.</p>
+      </div>
+      <AuthForm mode="signup" next={next} client:load />
+      <p class="text-center text-sm text-[var(--sea-ink-soft)]">
+        Already have an account? <a href={`/login?next=${encodeURIComponent(next)}`} class="text-[var(--lagoon-deep)] font-medium">Sign in</a>
+      </p>
+    </div>
+  </main>
+</Layout>

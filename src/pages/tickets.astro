@@ -1,0 +1,35 @@
+---
+import Layout from '#/layouts/Layout.astro';
+import { TicketsPanel } from '#/components/TicketsPanel';
+import TicketsPillarPanel from '#/components/TicketsPillarPanel';
+import { FlumineTab } from '#/components/tickets/FlumineTab';
+
+const tab = Astro.url.searchParams.get('tab') ?? 'pillar';
+---
+
+<Layout title="Betfront — Tickets">
+  <main class="page-wrap px-4 pb-12 pt-10">
+    <div class="mx-auto max-w-6xl space-y-8">
+      <div class="page-header">
+        <p class="island-kicker mb-2">Tickets &amp; Trading</p>
+        <h1 class="display-title text-3xl font-bold text-[var(--sea-ink)]">
+          Generate Tickets &amp; Trade
+        </h1>
+        <p class="mt-2 max-w-3xl text-[var(--sea-ink-soft)] leading-relaxed">
+          Build betting tickets from predictions and scraped data, or trade on
+          the Betfair Exchange using automated strategies.
+        </p>
+      </div>
+
+      <nav class="tab-bar -mx-4 px-4" aria-label="Tickets tabs">
+        <a href="/tickets?tab=pillar" class:list={['tab-pill', { 'is-active': tab === 'pillar' }]}>✨ Pillar 4 · Tickets</a>
+        <a href="/tickets?tab=generate" class:list={['tab-pill', { 'is-active': tab === 'generate' }]}>🎫 Legacy generator</a>
+        <a href="/tickets?tab=flumine" class:list={['tab-pill', { 'is-active': tab === 'flumine' }]}>📈 Flumine</a>
+      </nav>
+
+      {tab === 'pillar' && <TicketsPillarPanel client:load />}
+      {tab === 'generate' && <TicketsPanel client:load />}
+      {tab === 'flumine' && <FlumineTab client:load />}
+    </div>
+  </main>
+</Layout>

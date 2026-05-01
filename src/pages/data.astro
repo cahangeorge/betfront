@@ -1,0 +1,46 @@
+---
+import Layout from '#/layouts/Layout.astro';
+import { DataHubPanel } from '#/components/DataHubPanel';
+import { MatchesTable } from '#/components/MatchesTable';
+
+const params = Astro.url.searchParams;
+const today = new Date().toISOString().slice(0, 10);
+const tab = params.get('tab') ?? 'scrape';
+const dateFrom = params.get('dateFrom') ?? today;
+const dateTo = params.get('dateTo') ?? today;
+---
+
+<Layout title="Betfront — Data">
+  <main class="page-wrap px-4 pb-12 pt-10">
+    <div class="mx-auto max-w-6xl space-y-8">
+      <div class="page-header">
+        <p class="island-kicker mb-2">Data</p>
+        <h1 class="display-title text-3xl font-bold text-[var(--sea-ink)]">
+          Scrape &amp; Browse Data
+        </h1>
+        <p class="mt-2 max-w-3xl text-[var(--sea-ink-soft)] leading-relaxed">
+          Collect odds and statistics from multiple sources, then browse all
+          stored matches and odds in the History tab.
+        </p>
+      </div>
+
+      <nav class="tab-bar -mx-4 px-4" aria-label="Data tabs">
+        <a
+          href="/data?tab=scrape"
+          class:list={['tab-pill', { 'is-active': tab === 'scrape' }]}>🕷 Scrape</a
+        >
+        <a
+          href="/data?tab=history"
+          class:list={['tab-pill', { 'is-active': tab === 'history' }]}>📊 History</a
+        >
+      </nav>
+
+      {tab === 'scrape' && <DataHubPanel client:load />}
+      {
+        tab === 'history' && (
+          <MatchesTable client:load dateFrom={dateFrom} dateTo={dateTo} />
+        )
+      }
+    </div>
+  </main>
+</Layout>

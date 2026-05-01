@@ -1,0 +1,22 @@
+---
+import Layout from '#/layouts/Layout.astro';
+import { JobsPanel } from '#/components/JobsPanel';
+---
+
+<Layout title="Betfront — Jobs">
+  <main class="page-wrap px-4 pb-12 pt-10">
+    <div class="mx-auto max-w-6xl space-y-6">
+      <div class="page-header">
+        <p class="island-kicker mb-2">Automation</p>
+        <h1 class="display-title text-3xl font-bold text-[var(--sea-ink)]">
+          Scheduled jobs
+        </h1>
+        <p class="mt-2 max-w-3xl text-[var(--sea-ink-soft)] leading-relaxed">
+          Automate recurring scrapes, predictions, and arbitrage scans with cron-style schedules.
+        </p>
+      </div>
+
+      <JobsPanel client:load />
+    </div>
+  </main>
+</Layout>

@@ -1,0 +1,59 @@
+---
+import ThemeToggle from '#/components/ThemeToggle';
+import UserMenu from '#/components/UserMenu';
+
+const path = Astro.url.pathname;
+const isActive = (href: string) =>
+  href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`);
+const user = Astro.locals.user;
+
+const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/data', label: 'Data' },
+  { href: '/predict', label: 'Predict' },
+  { href: '/tickets', label: 'Tickets' },
+  { href: '/jobs', label: 'Jobs' },
+  { href: '/account', label: 'Account' },
+];
+---
+
+<header
+  class="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] backdrop-blur-lg"
+>
+  <div class="page-wrap flex items-center h-14 px-4 gap-3">
+    <!-- Brand -->
+    <a
+      href="/"
+      class="flex-shrink-0 inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] no-underline shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] transition-shadow"
+    >
+      <span class="h-2 w-2 rounded-full bg-[linear-gradient(135deg,#56c6be,#7ed3bf)] flex-shrink-0"></span>
+      Betfront
+    </a>
+
+    <!-- Desktop nav (hidden on mobile — BottomNav handles it) -->
+    <nav
+      class="hidden md:flex items-center gap-1 mx-auto"
+      aria-label="Main navigation"
+    >
+      {navLinks.map((link) => (
+        <a
+          href={link.href}
+          class:list={[
+            'rounded-full px-3.5 py-1.5 text-sm font-semibold no-underline transition-[background-color,color,border-color,box-shadow] duration-150',
+            isActive(link.href)
+              ? 'bg-[var(--chip-bg)] text-[var(--sea-ink)] border border-[var(--chip-line)] shadow-[var(--shadow-sm)]'
+              : 'text-[var(--sea-ink-soft)] hover:bg-[var(--chip-bg)] hover:text-[var(--sea-ink)] border border-transparent',
+          ]}
+        >
+          {link.label}
+        </a>
+      ))}
+    </nav>
+
+    <!-- Theme toggle (always visible, pushed right on mobile) -->
+    <div class="ml-auto md:ml-0 flex items-center gap-2">
+      <ThemeToggle client:load />
+      {user && <UserMenu user={user} client:load />}
+    </div>
+  </div>
+</header>

@@ -1,0 +1,45 @@
+---
+import Layout from '#/layouts/Layout.astro';
+import { PredictionsPanel } from '#/components/PredictionsPanel';
+import PredictPillarPanel from '#/components/PredictPillarPanel';
+import { TrainPredictTab } from '#/components/predict/TrainPredictTab';
+import { PredictionHistoryTab } from '#/components/predict/PredictionHistoryTab';
+import { BacktestTab } from '#/components/predict/BacktestTab';
+import { AnalyticsPanel } from '#/components/AnalyticsPanel';
+
+const tab = Astro.url.searchParams.get('tab') ?? 'pillar';
+---
+
+<Layout title="Betfront — Predict">
+  <main class="page-wrap px-4 pb-12 pt-10">
+    <div class="mx-auto max-w-6xl space-y-8">
+      <div class="page-header">
+        <p class="island-kicker mb-2">Prediction &amp; Training</p>
+        <h1 class="display-title text-3xl font-bold text-[var(--sea-ink)]">
+          Predict Match Outcomes
+        </h1>
+        <p class="mt-2 max-w-3xl text-[var(--sea-ink-soft)] leading-relaxed">
+          Run penaltyblog statistical models or train ML classifiers on
+          historical data. All predictions are saved to history for ticket
+          generation.
+        </p>
+      </div>
+
+      <nav class="tab-bar -mx-4 px-4" aria-label="Predict tabs">
+        <a href="/predict?tab=pillar" class:list={['tab-pill', { 'is-active': tab === 'pillar' }]}>✨ Pillar 3 · Predict</a>
+        <a href="/predict?tab=prediction" class:list={['tab-pill', { 'is-active': tab === 'prediction' }]}>🔮 Prediction</a>
+        <a href="/predict?tab=train" class:list={['tab-pill', { 'is-active': tab === 'train' }]}>🧠 Train &amp; Predict</a>
+        <a href="/predict?tab=analytics" class:list={['tab-pill', { 'is-active': tab === 'analytics' }]}>📐 Analytics</a>
+        <a href="/predict?tab=backtest" class:list={['tab-pill', { 'is-active': tab === 'backtest' }]}>🎯 Backtest</a>
+        <a href="/predict?tab=history" class:list={['tab-pill', { 'is-active': tab === 'history' }]}>📋 Prediction History</a>
+      </nav>
+
+      {tab === 'pillar' && <PredictPillarPanel client:load />}
+      {tab === 'prediction' && <PredictionsPanel client:load />}
+      {tab === 'train' && <TrainPredictTab client:load />}
+      {tab === 'analytics' && <AnalyticsPanel client:load />}
+      {tab === 'backtest' && <BacktestTab client:load />}
+      {tab === 'history' && <PredictionHistoryTab client:load />}
+    </div>
+  </main>
+</Layout>

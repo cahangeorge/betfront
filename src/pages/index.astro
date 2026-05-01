@@ -1,0 +1,131 @@
+---
+import Layout from '#/layouts/Layout.astro';
+
+const features = [
+  {
+    href: '/data',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`,
+    title: 'Data',
+    desc: 'Scrape live & historic odds via OddsHarvester, pull stats from ESPN, FBref, Sofascore & more. Browse all stored matches in the History tab.',
+    cta: 'Open Data →',
+  },
+  {
+    href: '/predict',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+    title: 'Predict',
+    desc: 'Run penaltyblog statistical models (Poisson, Dixon-Coles, Bayesian) or train ML classifiers. All predictions are saved for ticket generation.',
+    cta: 'Open Predict →',
+  },
+  {
+    href: '/tickets',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="9" y1="2" x2="9" y2="22"/></svg>`,
+    title: 'Tickets & Trading',
+    desc: 'Generate betting tickets from predictions, build manual accumulators, or trade live on Betfair Exchange via Flumine automated strategies.',
+    cta: 'Open Tickets →',
+  },
+];
+
+const stats = [
+  { value: '6+', label: 'Prediction models' },
+  { value: '8+', label: 'Data sources' },
+  { value: 'Live', label: 'Betfair odds' },
+];
+
+const steps = [
+  { n: '1', title: 'Scrape', desc: 'Pull odds & stats from OddsPortal, FBref, Sofascore, and more.' },
+  { n: '2', title: 'Predict', desc: 'Run statistical models to generate win-probability scores.' },
+  { n: '3', title: 'Bet', desc: 'Build value-bet tickets and trade on Betfair Exchange.' },
+];
+---
+
+<Layout title="Betfront — Odds. Data. Edge.">
+  <main class="page-wrap px-4 pb-12 pt-10">
+
+    <!-- Hero -->
+    <section
+      class="island-shell rise-in relative overflow-hidden rounded-[2rem] px-6 py-12 sm:px-10 sm:py-16"
+    >
+      <div class="pointer-events-none absolute -left-20 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(79,184,178,0.32),transparent_66%)]"></div>
+      <div class="pointer-events-none absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(47,106,74,0.18),transparent_66%)]"></div>
+
+      <p class="island-kicker mb-4">Sports Betting Dashboard</p>
+      <h1 class="display-title mb-5 max-w-3xl text-4xl leading-[1.02] font-bold tracking-tight text-[var(--sea-ink)] sm:text-[3.5rem]">
+        Odds. Data. Edge.
+      </h1>
+      <p class="mb-8 max-w-xl text-base text-[var(--sea-ink-soft)] sm:text-lg leading-relaxed">
+        Scrape live odds from OddsPortal, run predictive models, and build value-bet tickets — all from one dashboard.
+      </p>
+
+      <!-- CTA buttons -->
+      <div class="flex flex-wrap gap-3 mb-10">
+        <a
+          href="/data"
+          class="inline-flex items-center gap-2 rounded-full bg-[var(--lagoon-deep)] px-5 py-2.5 text-sm font-semibold text-white no-underline shadow-[var(--shadow-md)] transition hover:-translate-y-0.5 hover:bg-[var(--lagoon)] hover:shadow-[var(--shadow-glow-lagoon)]"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          Get Started
+        </a>
+        <a
+          href="/predict"
+          class="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-2.5 text-sm font-semibold text-[var(--sea-ink)] no-underline shadow-[var(--shadow-sm)] transition hover:-translate-y-0.5 hover:bg-[var(--surface-strong)]"
+        >
+          View Predictions
+        </a>
+      </div>
+
+      <!-- Stats row -->
+      <div class="flex flex-wrap gap-4">
+        {stats.map(stat => (
+          <div class="flex items-center gap-2.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2">
+            <span class="text-lg font-bold text-[var(--lagoon-deep)]">{stat.value}</span>
+            <span class="text-xs font-medium text-[var(--sea-ink-soft)]">{stat.label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Feature cards -->
+    <section class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Features">
+      {features.map((f, index) => (
+        <article
+          class="island-shell feature-card rise-in rounded-2xl p-5 flex flex-col"
+          style={`animation-delay: ${index * 90 + 80}ms`}
+        >
+          <div class="mb-3 inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[color-mix(in_oklab,var(--lagoon)_14%,transparent)] text-[var(--lagoon-deep)]"
+            set:html={f.icon}
+          />
+          <h2 class="mb-2 text-base font-semibold text-[var(--sea-ink)]">{f.title}</h2>
+          <p class="m-0 text-sm text-[var(--sea-ink-soft)] leading-relaxed flex-1">{f.desc}</p>
+          <a
+            href={f.href}
+            class="mt-4 inline-flex items-center text-xs font-semibold text-[var(--lagoon-deep)] no-underline hover:text-[var(--lagoon)] transition-colors"
+          >
+            {f.cta}
+          </a>
+        </article>
+      ))}
+    </section>
+
+    <!-- How it works strip -->
+    <section class="mt-10 island-shell rise-in rounded-2xl px-6 py-8 sm:px-10" style="animation-delay: 340ms">
+      <p class="island-kicker mb-6">How it works</p>
+      <div class="grid gap-6 sm:grid-cols-3">
+        {steps.map((step, i) => (
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-[color-mix(in_oklab,var(--lagoon)_18%,transparent)] text-[var(--lagoon-deep)] text-sm font-bold">
+              {step.n}
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-[var(--sea-ink)] mb-1">{step.title}</h3>
+              <p class="m-0 text-sm text-[var(--sea-ink-soft)] leading-relaxed">{step.desc}</p>
+            </div>
+            {i < steps.length - 1 && (
+              <div class="hidden sm:flex absolute right-0 top-1/2 text-[var(--line)]">→</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+
+  </main>
+</Layout>

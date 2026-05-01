@@ -1,0 +1,38 @@
+---
+const year = new Date().getFullYear();
+
+const navLinks = [
+  { href: '/data', label: 'Data' },
+  { href: '/predict', label: 'Predict' },
+  { href: '/tickets', label: 'Tickets' },
+];
+---
+
+<footer class="hidden md:block mt-20 border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--header-bg)_80%,transparent)] px-4 py-16">
+  <div class="page-wrap grid grid-cols-3 gap-8 text-sm text-[var(--sea-ink-soft)]">
+    <!-- Brand + tagline -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="h-2 w-2 rounded-full bg-[linear-gradient(135deg,#56c6be,#7ed3bf)] flex-shrink-0"></span>
+        <span class="font-semibold text-[var(--sea-ink)] text-base">Betfront</span>
+      </div>
+      <p class="m-0 text-sm leading-relaxed">Football analytics &amp; betting intelligence. Scrape, predict, and trade with confidence.</p>
+    </div>
+
+    <!-- Nav links -->
+    <div class="flex flex-col gap-2">
+      <p class="island-kicker mb-2 m-0">Pages</p>
+      {navLinks.map(link => (
+        <a href={link.href} class="text-sm text-[var(--sea-ink-soft)] no-underline hover:text-[var(--sea-ink)] transition-colors">{link.label}</a>
+      ))}
+    </div>
+
+    <!-- Credits -->
+    <div class="text-right">
+      <p class="island-kicker mb-2 m-0">Built with</p>
+      <p class="m-0 mb-1"><a href="https://astro.build" class="no-underline hover:text-[var(--sea-ink)] transition-colors" rel="noopener noreferrer" target="_blank">Astro</a></p>
+      <p class="m-0 mb-1"><a href="https://www.prisma.io" class="no-underline hover:text-[var(--sea-ink)] transition-colors" rel="noopener noreferrer" target="_blank">Prisma</a></p>
+      <p class="m-0 mt-6 text-xs">&copy; {year} Betfront</p>
+    </div>
+  </div>
+</footer>
