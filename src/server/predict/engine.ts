@@ -25,7 +25,7 @@ type FitPredictResult = {
 
 // ─── Match selection ────────────────────────────────────────────────────────
 
-async function fetchTrainingMatches(input: RunSingleInput) {
+export async function fetchTrainingMatches(input: RunSingleInput) {
   const where: any = {
     sport: input.sport,
     homeScore: { not: null },
@@ -40,14 +40,14 @@ async function fetchTrainingMatches(input: RunSingleInput) {
   }
   const rows = await prisma.match.findMany({
     where,
-    orderBy: [{ matchDate: 'desc' }, { createdAt: 'desc' }],
+    orderBy: [{ matchDate: 'asc' }, { createdAt: 'asc' }],
     take: input.trainingLimit,
     select: { homeTeam: true, awayTeam: true, homeScore: true, awayScore: true, matchDate: true },
   })
-  return rows.reverse() // chronological for time-decay weighting
+  return rows // chronological for time-decay weighting
 }
 
-async function fetchTargetMatches(input: RunSingleInput) {
+export async function fetchTargetMatches(input: RunSingleInput) {
   if (input.targetMode === 'matches') {
     if (!input.targetMatchIds?.length) return []
     return prisma.match.findMany({
@@ -134,56 +134,67 @@ export async function executeSingleModelRun(
   let written = 0
   let failed = 0
 
-  for (const target of targets) {
-    try {
-      const response = await runBridge<PenaltyblogBridgeResponse>({
-        operation: 'model_fit_predict',
-        payload: {
-          model: modelKey,
-          goals_home: goalsHome,
-          goals_away: goalsAway,
-          teams_home: teamsHome,
-          teams_away: teamsAway,
-          prediction: { home_team: target.homeTeam, away_team: target.awayTeam, max_goals: input.maxGoals },
-        },
-      })
-      const result = response.result as FitPredictResult
-      const grid = result.prediction
-      if (!grid) {
-        failed += 1
-        continue
+  const CONCURRENCY = 3
+
+  async function predictOne(target: typeof targets[number]): Promise<void> {
+    const response = await runBridge<PenaltyblogBridgeResponse>({
+      operation: 'model_fit_predict',
+      payload: {
+        model: modelKey,
+        goals_home: goalsHome,
+        goals_away: goalsAway,
+        teams_home: teamsHome,
+        teams_away: teamsAway,
+        prediction: { home_team: target.homeTeam, away_team: target.awayTeam, max_goals: input.maxGoals },
+      },
+    })
+    const result = response.result as FitPredictResult
+    const grid = result.prediction
+    if (!grid) return
+    const rows: Array<{
+      runId: number
+      matchId: number
+      modelKey: string
+      market: string
+      outcome: string
+      probability: number
+      raw: string | null
+    }> = []
+    for (const market of input.markets) {
+      for (const { outcome, probability } of extractMarketProbabilities(grid, market)) {
+        rows.push({
+          runId,
+          matchId: target.id,
+          modelKey,
+          market,
+          outcome,
+          probability,
+          raw: market === '1x2' ? JSON.stringify({ dataQuality: result.dataQuality ?? null }) : null,
+        })
       }
-      const rows: Array<{
-        runId: number
-        matchId: number
-        modelKey: string
-        market: string
-        outcome: string
-        probability: number
-        raw: string | null
-      }> = []
-      for (const market of input.markets) {
-        for (const { outcome, probability } of extractMarketProbabilities(grid, market)) {
-          rows.push({
-            runId,
-            matchId: target.id,
-            modelKey,
-            market,
-            outcome,
-            probability,
-            raw: market === '1x2' ? JSON.stringify({ dataQuality: result.dataQuality ?? null }) : null,
-          })
-        }
-      }
-      if (rows.length) {
-        await prisma.modelPrediction.createMany({ data: rows })
-        written += rows.length
-      }
-    } catch (error) {
-      failed += 1
-      console.error(`[predict] ${modelKey} failed for match ${target.id}:`, error instanceof Error ? error.message : error)
+    }
+    if (rows.length) {
+      await prisma.modelPrediction.createMany({ data: rows })
+      written += rows.length
     }
   }
+
+  let index = 0
+  async function worker() {
+    while (index < targets.length) {
+      const i = index++
+      const target = targets[i]
+      try {
+        await predictOne(target)
+      } catch (error) {
+        failed += 1
+        console.error(`[predict] ${modelKey} failed for match ${target.id}:`, error instanceof Error ? error.message : error)
+      }
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(CONCURRENCY, targets.length) }, () => worker())
+  await Promise.all(workers)
 
   return {
     trainingMatches: training.length,
@@ -230,7 +241,13 @@ export async function runSingleModelPrediction(_input: unknown) {
         },
       })
     }
-  })()
+  })().catch((error) => {
+    console.error('[predict] unhandled error in background run:', error)
+    prisma.predictionRun.update({
+      where: { id: run.id },
+      data: { status: 'failed', finishedAt: new Date(), error: error instanceof Error ? error.message : String(error) },
+    }).catch(() => {})
+  })
 
   return { runId: run.id, status: run.status }
 }

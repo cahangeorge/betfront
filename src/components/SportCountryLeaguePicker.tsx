@@ -5,8 +5,13 @@ import { getCountryOptions, type MarketEntry } from '#/lib/oddsHarvesterShared'
 import { getLeagueCatalog } from '#/lib/client-actions/scraper'
 import { getSoccerDataCatalog, type SoccerDataCatalog } from '#/lib/client-actions/soccerdata'
 import { getPredictionLeagues } from '#/lib/client-actions/tickets'
-
-export const ALL_LEAGUES_VALUE = '__all__'
+import {
+  ALL_LEAGUES_VALUE,
+  OH_TO_SD,
+  expandCountryLeagueSelections,
+  getLocalLeagueQuery,
+  getPrimaryLeagueValue,
+} from '#/components/sportCountryLeaguePicker.helpers'
 
 // ─── Shared helpers (extracted from PredictionsPanel) ────────────────────────
 
@@ -18,17 +23,6 @@ export function getSoccerdataLeagueOptions(catalog: SoccerDataCatalog) {
   return [...all.entries()]
     .map(([value, label]) => ({ label, value }))
     .sort((a, b) => a.label.localeCompare(b.label))
-}
-
-// Static OddsHarvester country slug → soccerdata 2-4 letter code mapping.
-export const OH_TO_SD: Record<string, string> = {
-  england: 'ENG', spain: 'ESP', italy: 'ITA', germany: 'GER', france: 'FRA',
-  portugal: 'POR', netherlands: 'NED', scotland: 'SCO', turkey: 'TUR',
-  belgium: 'BEL', russia: 'RUS', greece: 'GRE', sweden: 'SWE',
-  denmark: 'DEN', norway: 'NOR', poland: 'POL', switzerland: 'SUI',
-  austria: 'AUT', croatia: 'CRO', czechia: 'CZE', romania: 'ROU',
-  ukraine: 'UKR', serbia: 'SRB', brazil: 'BRA', argentina: 'ARG',
-  usa: 'USA', mexico: 'MEX', japan: 'JPN', china: 'CHN',
 }
 
 const SD_CODE_TO_OH_COUNTRY: Record<string, string> = Object.fromEntries(
@@ -48,11 +42,6 @@ function slugToTitle(s: string) {
       return UPPERCASE_ABBREVS.has(lower) ? lower.toUpperCase() : lower.charAt(0).toUpperCase() + lower.slice(1)
     })
     .join(' ')
-}
-
-export function getLocalLeagueQuery(league: string) {
-  if (league === ALL_LEAGUES_VALUE) return ''
-  return league.replace(/^[A-Z]{2,4}-/, '').trim()
 }
 
 // ─── Hook: shared picker state + computed options ───────────────────────────
@@ -198,11 +187,13 @@ export function useSportCountryLeagues(initial?: {
     ]
   }, [filteredLeagueOptions, sdLeagueValues, countryGroupOptions])
 
+  const handleLeagueChange = React.useCallback((newValues: string[]) => {
+    setLeagues(expandCountryLeagueSelections(newValues, filteredLeagueOptions))
+  }, [filteredLeagueOptions])
+
   const primaryLeague = React.useMemo(() => {
-    const first = leagues.find((l) => l !== ALL_LEAGUES_VALUE && !l.startsWith('__country_'))
-    if (!first) return ''
-    return getLocalLeagueQuery(first)
-  }, [leagues])
+    return getPrimaryLeagueValue(leagues, filteredLeagueOptions)
+  }, [filteredLeagueOptions, leagues])
 
   return {
     sports,
@@ -210,7 +201,7 @@ export function useSportCountryLeagues(initial?: {
     leagues,
     setSports,
     setCountries,
-    setLeagues,
+    setLeagues: handleLeagueChange,
     countryOptions,
     leagueOptions,
     filteredLeagueOptions,

@@ -15,6 +15,7 @@ import {
   scanArbitrage as _scanArbitrage,
   placeArbitrage as _placeArbitrage,
 } from './tickets/arbitrage'
+import { buildLeagueSearchTerms } from '#/server/leagues'
 import { getBestOddsForMatches as _getBestOddsForMatches } from './scrape/best-odds'
 
 // ─── Phase 4 tickets pillar wrappers (picked up by gen-actions.mjs) ─────
@@ -199,24 +200,6 @@ function calcTicketStats(selections: TicketSelection[], stake: number) {
     expectedValue: parseFloat(expectedValue.toFixed(4)),
     potentialReturn: parseFloat(potentialReturn.toFixed(2)),
   }
-}
-
-function buildLeagueSearchTerms(league: string) {
-  const trimmed = league.trim()
-  if (!trimmed) return []
-
-  const terms = new Set<string>([trimmed])
-  const withoutPrefix = trimmed.replace(/^[A-Z]{2,4}-/, '').trim()
-  if (withoutPrefix) terms.add(withoutPrefix)
-
-  // Convert slug-format "saudi-professional-league" → "Saudi Professional League"
-  for (const t of [...terms]) {
-    if (t.includes('-')) {
-      terms.add(t.replace(/-/g, ' '))
-    }
-  }
-
-  return [...terms]
 }
 
 // ─── Server Functions ──────────────────────────────────────────────────────────

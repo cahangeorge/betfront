@@ -1,20 +1,19 @@
-import { spawnLogged as spawn } from '#/server/dev-log'
-import { readFile, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { z } from 'zod'
+import { runBridge as runBridgeImpl, resolveBridgePath } from '#/server/bridge'
 
-const SOCCERDATA_PYTHON = path.resolve(`${import.meta.dirname}/../../../soccerdata/.venv/bin/python`)
-const SOCCERDATA_BRIDGE = path.resolve(`${import.meta.dirname}/../../scripts/soccerdata_bridge.py`)
+const SOCCERDATA_PYTHON = resolveBridgePath(
+  'SOCCERDATA_PYTHON',
+  path.resolve(`${import.meta.dirname}/../../../soccerdata/.venv/bin/python`),
+)
+const SOCCERDATA_BRIDGE = resolveBridgePath(
+  'SOCCERDATA_BRIDGE',
+  path.resolve(`${import.meta.dirname}/../../scripts/soccerdata_bridge.py`),
+)
+const bridgeOpts = { pythonBin: SOCCERDATA_PYTHON, bridgeScript: SOCCERDATA_BRIDGE, label: 'soccerdata' } as const
 
-export type SoccerDataCatalog = {
-  espnLeagues: Array<{ label: string; value: string; sourceId: string }>
-  clubEloLeagues: Array<{ label: string; value: string }>
-  matchHistoryLeagues: Array<{ label: string; value: string; sourceId: string }>
-  fbrefLeagues: Array<{ label: string; value: string; sourceId: string }>
-  sofascoreLeagues: Array<{ label: string; value: string; sourceId: string }>
-  understatLeagues: Array<{ label: string; value: string }>
-  sofifaLeagues: Array<{ label: string; value: string }>
-  whoscoredLeagues: Array<{ label: string; value: string; sourceId: string }>
+async function runBridgeTyped<T>(payload: Record<string, unknown>): Promise<T> {
+  return runBridgeImpl<T>(payload, bridgeOpts)
 }
 
 export type EspnScheduleRow = {
@@ -230,75 +229,15 @@ const fbrefScheduleSchema = z.object({
   proxy: z.string().optional(),
 })
 
-async function runBridge<T>(payload: Record<string, unknown>): Promise<T> {
-  const outputPath = `/tmp/frontbet_soccerdata_${Date.now()}_${Math.random().toString(36).slice(2)}.json`
-  console.log('[bridge] starting:', payload.operation, 'output:', outputPath)
-
-  return new Promise((resolve, reject) => {
-    const proc = spawn(SOCCERDATA_PYTHON, [SOCCERDATA_BRIDGE, '--payload', JSON.stringify(payload), '--output', outputPath], {
-      detached: true,
-      env: {
-        ...process.env,
-        PYTHONUNBUFFERED: '1',
-      },
-    })
-
-    let stderr = ''
-    proc.stderr.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString()
-    })
-
-    // Detached process group — kill with negative PID to reach all children
-    const timeout = setTimeout(() => {
-      try { process.kill(-proc.pid!, 'SIGTERM') } catch { /* already exited */ }
-      reject(new Error('soccerdata request timed out'))
-    }, 180_000)
-
-    proc.on('close', async (code) => {
-      clearTimeout(timeout)
-      console.log('[bridge] close:', payload.operation, 'code:', code, 'stderr:', stderr.slice(0, 200))
-
-      // Process killed by signal (code === null) — no output file exists
-      if (code === null) {
-        reject(new Error(stderr.trim() || `soccerdata bridge killed by signal (${payload.operation})`))
-        return
-      }
-
-      try {
-        const text = await readFile(outputPath, 'utf-8')
-        const parsed = JSON.parse(text) as { ok: boolean; result?: T; error?: string }
-        await unlink(outputPath).catch(() => undefined)
-
-        if (!parsed.ok || code !== 0) {
-          console.log('[bridge] error:', parsed.error ?? stderr.trim())
-          reject(new Error(parsed.error ?? (stderr.trim() || 'soccerdata bridge failed')))
-          return
-        }
-
-        console.log('[bridge] success:', payload.operation, 'result keys:', Object.keys(parsed.result as object).join(','))
-        resolve(parsed.result as T)
-      } catch (error) {
-        console.log('[bridge] read error:', error)
-        reject(error instanceof Error ? error : new Error('Failed to read soccerdata response'))
-      }
-    })
-
-    proc.on('error', (error) => {
-      clearTimeout(timeout)
-      reject(error)
-    })
-  })
-}
-
 export async function getSoccerDataCatalog() {
-  return runBridge<SoccerDataCatalog>({ operation: 'catalog' })
+  return runBridgeTyped<SoccerDataCatalog>({ operation: 'catalog' })
 
 }
 export async function getEspnSchedule(_input: unknown) {
   const data = ((data: z.infer<typeof espnScheduleSchema>) => espnScheduleSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<EspnScheduleResult>({
+      return await runBridgeTyped<EspnScheduleResult>({
         operation: 'espn_schedule',
         ...data,
       })
@@ -311,7 +250,7 @@ export async function getClubEloRatings(_input: unknown) {
   const data = ((data: z.infer<typeof clubEloSchema>) => clubEloSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<ClubEloResult>({
+      return await runBridgeTyped<ClubEloResult>({
         operation: 'clubelo_ratings',
         ...data,
       })
@@ -324,7 +263,7 @@ export async function getMatchHistoryGames(_input: unknown) {
   const data = ((data: z.infer<typeof matchHistorySchema>) => matchHistorySchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<MatchHistoryResult>({
+      return await runBridgeTyped<MatchHistoryResult>({
         operation: 'matchhistory_games',
         ...data,
       })
@@ -337,7 +276,7 @@ export async function getFBrefSchedule(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefScheduleSchema>) => fbrefScheduleSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefScheduleResult>({
+      return await runBridgeTyped<FBrefScheduleResult>({
         operation: 'fbref_schedule',
         ...data,
       })
@@ -360,7 +299,7 @@ export async function getFBrefTeamStats(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefTeamStatsSchema>) => fbrefTeamStatsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefTeamStatsResult>({
+      return await runBridgeTyped<FBrefTeamStatsResult>({
         operation: 'fbref_team_stats',
         ...data,
       })
@@ -381,7 +320,7 @@ export async function getClubEloTeamHistory(_input: unknown) {
   const data = ((data: z.infer<typeof clubEloHistorySchema>) => clubEloHistorySchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<ClubEloHistoryResult>({
+      return await runBridgeTyped<ClubEloHistoryResult>({
         operation: 'clubelo_team_history',
         ...data,
       })
@@ -402,7 +341,7 @@ export async function getSofascoreStandings(_input: unknown) {
   const data = ((data: z.infer<typeof sofascoreStandingsSchema>) => sofascoreStandingsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<SofascoreStandingsResult>({
+      return await runBridgeTyped<SofascoreStandingsResult>({
         operation: 'sofascore_standings',
         ...data,
       })
@@ -425,7 +364,7 @@ export async function getFBrefShotEvents(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefShotEventsSchema>) => fbrefShotEventsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefShotResult>({
+      return await runBridgeTyped<FBrefShotResult>({
         operation: 'fbref_shot_events',
         ...data,
       })
@@ -463,7 +402,7 @@ export async function getSofascoreSchedule(_input: unknown) {
   const data = ((data: z.infer<typeof sofascoreScheduleSchema>) => sofascoreScheduleSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<SofascoreScheduleResult>({ operation: 'sofascore_schedule', ...data })
+      return await runBridgeTyped<SofascoreScheduleResult>({ operation: 'sofascore_schedule', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load Sofascore schedule')
     }
@@ -500,7 +439,7 @@ export async function getUnderstatSchedule(_input: unknown) {
   const data = ((data: z.infer<typeof understatScheduleSchema>) => understatScheduleSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<UnderstatScheduleResult>({ operation: 'understat_schedule', ...data })
+      return await runBridgeTyped<UnderstatScheduleResult>({ operation: 'understat_schedule', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load Understat schedule')
     }
@@ -541,7 +480,7 @@ export async function getUnderstatTeamMatchStats(_input: unknown) {
   const data = ((data: z.infer<typeof understatTeamMatchSchema>) => understatTeamMatchSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<UnderstatTeamMatchResult>({ operation: 'understat_team_match_stats', ...data })
+      return await runBridgeTyped<UnderstatTeamMatchResult>({ operation: 'understat_team_match_stats', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load Understat team match stats')
     }
@@ -582,7 +521,7 @@ export async function getUnderstatPlayerSeasonStats(_input: unknown) {
   const data = ((data: z.infer<typeof understatPlayerSchema>) => understatPlayerSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<UnderstatPlayerResult>({ operation: 'understat_player_season_stats', ...data })
+      return await runBridgeTyped<UnderstatPlayerResult>({ operation: 'understat_player_season_stats', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load Understat player season stats')
     }
@@ -622,7 +561,7 @@ export async function getUnderstatShotEvents(_input: unknown) {
   const data = ((data: z.infer<typeof understatShotSchema>) => understatShotSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<UnderstatShotResult>({ operation: 'understat_shot_events', ...data })
+      return await runBridgeTyped<UnderstatShotResult>({ operation: 'understat_shot_events', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load Understat shot events')
     }
@@ -648,7 +587,7 @@ export async function getFBrefPlayerSeasonStats(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefPlayerSeasonSchema>) => fbrefPlayerSeasonSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefPlayerSeasonResult>({ operation: 'fbref_player_season_stats', ...data })
+      return await runBridgeTyped<FBrefPlayerSeasonResult>({ operation: 'fbref_player_season_stats', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load FBref player season stats')
     }
@@ -675,7 +614,7 @@ export async function getFBrefTeamMatchStats(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefTeamMatchSchema>) => fbrefTeamMatchSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefTeamMatchResult>({ operation: 'fbref_team_match_stats', ...data })
+      return await runBridgeTyped<FBrefTeamMatchResult>({ operation: 'fbref_team_match_stats', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load FBref team match stats')
     }
@@ -702,7 +641,7 @@ export async function getEspnMatchsheet(_input: unknown) {
   const data = ((data: z.infer<typeof espnMatchsheetSchema>) => espnMatchsheetSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<EspnMatchsheetResult>({ operation: 'espn_matchsheet', ...data })
+      return await runBridgeTyped<EspnMatchsheetResult>({ operation: 'espn_matchsheet', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load ESPN matchsheet')
     }
@@ -729,7 +668,7 @@ export async function getEspnLineup(_input: unknown) {
   const data = ((data: z.infer<typeof espnLineupSchema>) => espnLineupSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<EspnLineupResult>({ operation: 'espn_lineup', ...data })
+      return await runBridgeTyped<EspnLineupResult>({ operation: 'espn_lineup', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load ESPN lineup')
     }
@@ -757,7 +696,7 @@ export async function getFBrefTeamSeasonStats(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefTeamSeasonSchema>) => fbrefTeamSeasonSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefTeamSeasonResult>({ operation: 'fbref_team_season_stats', ...data })
+      return await runBridgeTyped<FBrefTeamSeasonResult>({ operation: 'fbref_team_season_stats', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load FBref team season stats')
     }
@@ -785,7 +724,7 @@ export async function getFBrefPlayerMatchStats(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefPlayerMatchSchema>) => fbrefPlayerMatchSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefPlayerMatchResult>({ operation: 'fbref_player_match_stats', ...data })
+      return await runBridgeTyped<FBrefPlayerMatchResult>({ operation: 'fbref_player_match_stats', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load FBref player match stats')
     }
@@ -812,7 +751,7 @@ export async function getFBrefLineup(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefLineupSchema>) => fbrefLineupSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefLineupResult>({ operation: 'fbref_lineup', ...data })
+      return await runBridgeTyped<FBrefLineupResult>({ operation: 'fbref_lineup', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load FBref lineup')
     }
@@ -839,7 +778,7 @@ export async function getFBrefEvents(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefEventsSchema>) => fbrefEventsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefEventsResult>({ operation: 'fbref_events', ...data })
+      return await runBridgeTyped<FBrefEventsResult>({ operation: 'fbref_events', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load FBref events')
     }
@@ -866,7 +805,7 @@ export async function getUnderstatPlayerMatchStats(_input: unknown) {
   const data = ((data: z.infer<typeof understatPlayerMatchSchema>) => understatPlayerMatchSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<UnderstatPlayerMatchResult>({ operation: 'understat_player_match_stats', ...data })
+      return await runBridgeTyped<UnderstatPlayerMatchResult>({ operation: 'understat_player_match_stats', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load Understat player match stats')
     }
@@ -889,7 +828,7 @@ export async function getSoFIFALeagues(_input: unknown) {
   const data = ((data: z.infer<typeof sofifaLeaguesSchema>) => sofifaLeaguesSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<SoFIFALeaguesResult>({ operation: 'sofifa_leagues', ...data })
+      return await runBridgeTyped<SoFIFALeaguesResult>({ operation: 'sofifa_leagues', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load SoFIFA leagues')
     }
@@ -912,7 +851,7 @@ export async function getSoFIFAVersions(_input: unknown) {
   const data = ((data: z.infer<typeof sofifaVersionsSchema>) => sofifaVersionsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<SoFIFAVersionsResult>({ operation: 'sofifa_versions', ...data })
+      return await runBridgeTyped<SoFIFAVersionsResult>({ operation: 'sofifa_versions', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load SoFIFA versions')
     }
@@ -936,7 +875,7 @@ export async function getSoFIFATeams(_input: unknown) {
   const data = ((data: z.infer<typeof sofifaTeamsSchema>) => sofifaTeamsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<SoFIFATeamsResult>({ operation: 'sofifa_teams', ...data })
+      return await runBridgeTyped<SoFIFATeamsResult>({ operation: 'sofifa_teams', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load SoFIFA teams')
     }
@@ -961,7 +900,7 @@ export async function getSoFIFAPlayers(_input: unknown) {
   const data = ((data: z.infer<typeof sofifaPlayersSchema>) => sofifaPlayersSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<SoFIFAPlayersResult>({ operation: 'sofifa_players', ...data })
+      return await runBridgeTyped<SoFIFAPlayersResult>({ operation: 'sofifa_players', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load SoFIFA players')
     }
@@ -985,7 +924,7 @@ export async function getSoFIFATeamRatings(_input: unknown) {
   const data = ((data: z.infer<typeof sofifaTeamRatingsSchema>) => sofifaTeamRatingsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<SoFIFATeamRatingsResult>({ operation: 'sofifa_team_ratings', ...data })
+      return await runBridgeTyped<SoFIFATeamRatingsResult>({ operation: 'sofifa_team_ratings', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load SoFIFA team ratings')
     }
@@ -1011,7 +950,7 @@ export async function getSoFIFAPlayerRatings(_input: unknown) {
   const data = ((data: z.infer<typeof sofifaPlayerRatingsSchema>) => sofifaPlayerRatingsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<SoFIFAPlayerRatingsResult>({ operation: 'sofifa_player_ratings', ...data })
+      return await runBridgeTyped<SoFIFAPlayerRatingsResult>({ operation: 'sofifa_player_ratings', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load SoFIFA player ratings')
     }
@@ -1035,7 +974,7 @@ export async function getFBrefLeagues(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefLeaguesSchema>) => fbrefLeaguesSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefLeaguesResult>({ operation: 'fbref_leagues', ...data })
+      return await runBridgeTyped<FBrefLeaguesResult>({ operation: 'fbref_leagues', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load FBref leagues')
     }
@@ -1059,7 +998,7 @@ export async function getFBrefSeasons(_input: unknown) {
   const data = ((data: z.infer<typeof fbrefSeasonsSchema>) => fbrefSeasonsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<FBrefSeasonsResult>({ operation: 'fbref_seasons', ...data })
+      return await runBridgeTyped<FBrefSeasonsResult>({ operation: 'fbref_seasons', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load FBref seasons')
     }
@@ -1083,7 +1022,7 @@ export async function getSofascoreLeagues(_input: unknown) {
   const data = ((data: z.infer<typeof sofascoreLeaguesSchema>) => sofascoreLeaguesSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<SofascoreLeaguesResult>({ operation: 'sofascore_leagues', ...data })
+      return await runBridgeTyped<SofascoreLeaguesResult>({ operation: 'sofascore_leagues', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load Sofascore leagues')
     }
@@ -1107,7 +1046,7 @@ export async function getSofascoreSeasons(_input: unknown) {
   const data = ((data: z.infer<typeof sofascoreSeasonsSchema>) => sofascoreSeasonsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<SofascoreSeasonsResult>({ operation: 'sofascore_seasons', ...data })
+      return await runBridgeTyped<SofascoreSeasonsResult>({ operation: 'sofascore_seasons', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load Sofascore seasons')
     }
@@ -1131,7 +1070,7 @@ export async function getUnderstatLeagues(_input: unknown) {
   const data = ((data: z.infer<typeof understatLeaguesSchema>) => understatLeaguesSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<UnderstatLeaguesResult>({ operation: 'understat_leagues', ...data })
+      return await runBridgeTyped<UnderstatLeaguesResult>({ operation: 'understat_leagues', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load Understat leagues')
     }
@@ -1155,7 +1094,7 @@ export async function getUnderstatSeasons(_input: unknown) {
   const data = ((data: z.infer<typeof understatSeasonsSchema>) => understatSeasonsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<UnderstatSeasonsResult>({ operation: 'understat_seasons', ...data })
+      return await runBridgeTyped<UnderstatSeasonsResult>({ operation: 'understat_seasons', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load Understat seasons')
     }
@@ -1179,7 +1118,7 @@ export async function getWhoScoredLeagues(_input: unknown) {
   const data = ((data: z.infer<typeof whoScoredLeaguesSchema>) => whoScoredLeaguesSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<WhoScoredLeaguesResult>({ operation: 'whoscored_leagues', ...data })
+      return await runBridgeTyped<WhoScoredLeaguesResult>({ operation: 'whoscored_leagues', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load WhoScored leagues')
     }
@@ -1203,7 +1142,7 @@ export async function getWhoScoredSeasons(_input: unknown) {
   const data = ((data: z.infer<typeof whoScoredSeasonsSchema>) => whoScoredSeasonsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<WhoScoredSeasonsResult>({ operation: 'whoscored_seasons', ...data })
+      return await runBridgeTyped<WhoScoredSeasonsResult>({ operation: 'whoscored_seasons', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load WhoScored seasons')
     }
@@ -1228,7 +1167,7 @@ export async function getWhoScoredSeasonStages(_input: unknown) {
   const data = ((data: z.infer<typeof whoScoredSeasonStagesSchema>) => whoScoredSeasonStagesSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<WhoScoredSeasonStagesResult>({ operation: 'whoscored_season_stages', ...data })
+      return await runBridgeTyped<WhoScoredSeasonStagesResult>({ operation: 'whoscored_season_stages', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load WhoScored season stages')
     }
@@ -1254,7 +1193,7 @@ export async function getWhoScoredSchedule(_input: unknown) {
   const data = ((data: z.infer<typeof whoScoredScheduleSchema>) => whoScoredScheduleSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<WhoScoredScheduleResult>({ operation: 'whoscored_schedule', ...data })
+      return await runBridgeTyped<WhoScoredScheduleResult>({ operation: 'whoscored_schedule', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load WhoScored schedule')
     }
@@ -1280,7 +1219,7 @@ export async function getWhoScoredMissingPlayers(_input: unknown) {
   const data = ((data: z.infer<typeof whoScoredMissingPlayersSchema>) => whoScoredMissingPlayersSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<WhoScoredMissingPlayersResult>({ operation: 'whoscored_missing_players', ...data })
+      return await runBridgeTyped<WhoScoredMissingPlayersResult>({ operation: 'whoscored_missing_players', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load WhoScored missing players')
     }
@@ -1307,7 +1246,7 @@ export async function getWhoScoredEvents(_input: unknown) {
   const data = ((data: z.infer<typeof whoScoredEventsSchema>) => whoScoredEventsSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<WhoScoredEventsResult>({ operation: 'whoscored_events', ...data })
+      return await runBridgeTyped<WhoScoredEventsResult>({ operation: 'whoscored_events', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load WhoScored events')
     }
@@ -1319,7 +1258,7 @@ type TeamMappingResult = { mappings: Record<string, string[]> }
 
 export async function getTeamMapping() {
     try {
-      return await runBridge<TeamMappingResult>({ operation: 'team_mapping_get' })
+      return await runBridgeTyped<TeamMappingResult>({ operation: 'team_mapping_get' })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to load team mappings')
     }
@@ -1333,7 +1272,7 @@ export async function setTeamMapping(_input: unknown) {
   const data = ((data: z.infer<typeof teamMappingSetSchema>) => teamMappingSetSchema.parse(data))(_input as any);
 
     try {
-      return await runBridge<{ ok: boolean; path: string }>({ operation: 'team_mapping_set', ...data })
+      return await runBridgeTyped<{ ok: boolean; path: string }>({ operation: 'team_mapping_set', ...data })
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to save team mappings')
     }

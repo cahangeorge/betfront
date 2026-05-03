@@ -60,6 +60,8 @@ export interface UseQueryResult<T> {
   refetch: () => Promise<T | undefined>;
 }
 
+let inflightFetches = new Map<string, Promise<unknown>>();
+
 export function useQuery<T>(opts: UseQueryOptions<T>): UseQueryResult<T> {
   const { queryKey, queryFn, enabled = true, staleTime = 0, initialData } = opts;
   const k = keyOf(queryKey);
@@ -83,7 +85,10 @@ export function useQuery<T>(opts: UseQueryOptions<T>): UseQueryResult<T> {
       if (!force_ && entry && Date.now() - entry.updatedAt < staleTime) {
         return entry.data as T;
       }
-      if (entry?.promise) return entry.promise as Promise<T>;
+
+      const inflight = inflightFetches.get(k);
+      if (inflight) return inflight as Promise<T>;
+
       const promise = (async () => {
         try {
           const data = await queryFnRef.current();
@@ -100,8 +105,11 @@ export function useQuery<T>(opts: UseQueryOptions<T>): UseQueryResult<T> {
           });
           notify(k);
           throw error;
+        } finally {
+          inflightFetches.delete(k);
         }
       })();
+      inflightFetches.set(k, promise);
       cache.set(k, {
         data: entry?.data,
         error: entry?.error ?? null,
@@ -225,7 +233,9 @@ export function useMutation<TData = unknown, TVars = void>(
   }, []);
 
   const mutate = useCallback((vars?: TVars) => {
-    void mutateAsync(vars).catch(() => {});
+    void mutateAsync(vars).catch((error) => {
+      console.error('[query] useMutation mutate failed:', error);
+    });
   }, [mutateAsync]);
 
   const reset = useCallback(() => {
@@ -255,7 +265,7 @@ const client: QueryClientShim = {
   invalidateQueries({ queryKey, exact }) {
     const target = keyOf(queryKey);
     for (const k of Array.from(cache.keys())) {
-      const matches = exact ? k === target : k.startsWith(target.slice(0, -1));
+      const matches = exact ? k === target : k.startsWith(target);
       if (matches) {
         const entry = cache.get(k)!;
         cache.set(k, { ...entry, updatedAt: 0 });

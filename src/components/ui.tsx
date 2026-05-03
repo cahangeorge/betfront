@@ -284,6 +284,7 @@ export function MultiSelect({
   searchable = false,
   searchPlaceholder = 'Search...',
   maxVisibleLabels = 1,
+  dropdownMode = 'overlay',
   triggerAriaLabel,
   testId,
 }: {
@@ -297,6 +298,7 @@ export function MultiSelect({
   searchable?: boolean
   searchPlaceholder?: string
   maxVisibleLabels?: number
+  dropdownMode?: 'overlay' | 'inline'
   triggerAriaLabel?: string
   testId?: string
 }) {
@@ -414,7 +416,12 @@ export function MultiSelect({
       </button>
 
       {open && !disabled && (
-        <div className="absolute z-50 mt-1 w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-1 shadow-lg shadow-black/20">
+        <div
+          className={cn(
+            'w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-1 shadow-lg shadow-black/20',
+            dropdownMode === 'inline' ? 'relative mt-1' : 'absolute z-50 mt-1',
+          )}
+        >
           {searchable && (
             <div className="p-1">
               <input
@@ -429,12 +436,60 @@ export function MultiSelect({
               />
             </div>
           )}
-          <div className="max-h-64 overflow-y-auto">
+          {filteredOptions.length > 0 && (
+            <div className="flex items-center gap-1 border-b border-[var(--line)] px-2 py-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const newValues = new Set(values)
+                  for (const option of filteredOptions) newValues.add(option.value)
+                  onValuesChange([...newValues])
+                }}
+                className="rounded border border-[var(--line)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sea-ink-soft)] hover:bg-[var(--surface-strong)]"
+              >
+                Select all
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const filteredSet = new Set(filteredOptions.map((option) => option.value))
+                  onValuesChange(values.filter((value) => !filteredSet.has(value)))
+                }}
+                className="rounded border border-[var(--line)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sea-ink-soft)] hover:bg-[var(--surface-strong)]"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+          <div className="max-h-80 overflow-y-auto">
             {(filteredGroups.length > 0 ? filteredGroups : [{ label: null, options: filteredOptions }]).map((group, groupIndex) => (
               <div key={group.label ?? `ungrouped-${groupIndex}`}>
                 {group.label ? (
-                  <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]/70">
-                    {group.label}
+                  <div className="flex items-center gap-1 px-3 pb-1 pt-2">
+                    <span className="flex-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]/70">
+                      {group.label}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newValues = new Set(values)
+                        for (const option of group.options) newValues.add(option.value)
+                        onValuesChange([...newValues])
+                      }}
+                      className="rounded border border-[var(--line)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sea-ink-soft)] hover:bg-[var(--surface-strong)]"
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const groupSet = new Set(group.options.map((option) => option.value))
+                        onValuesChange(values.filter((value) => !groupSet.has(value)))
+                      }}
+                      className="rounded border border-[var(--line)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--sea-ink-soft)] hover:bg-[var(--surface-strong)]"
+                    >
+                      Clear
+                    </button>
                   </div>
                 ) : null}
                 {group.options.map((option) => {

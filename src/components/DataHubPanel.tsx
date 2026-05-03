@@ -8,9 +8,6 @@ import {
   MultiSelect,
   Select,
   Spinner,
-  Tabs,
-  TabsList,
-  TabsTrigger,
 } from '#/components/ui'
 import { JobsList } from '#/components/JobsList'
 import { OddsHarvesterFilters } from '#/components/OddsHarvesterFilters'
@@ -161,6 +158,18 @@ const FBREF_STAT_TYPES = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function historicSeasonOptions(count = 12) {
+  const currentStart = currentSeasonStartYear()
+  return Array.from({ length: count }, (_, i) => {
+    const start = currentStart - (count - 1 - i)
+    const value = `${start}-${start + 1}`
+    const label = start === currentStart
+      ? `${value} · Jul ${start} - Present`
+      : `${value} · Jul ${start} - Jun ${start + 1}`
+    return { label, value }
+  }).reverse()
+}
+
 function matchHistorySeasonOptions(count = 9) {
   const y = currentSeasonStartYear() - 1
   return Array.from({ length: count }, (_, i) => {
@@ -271,7 +280,8 @@ function OddsHarvesterForm() {
   })
   const catalog = catalogQ.data ?? []
 
-  const [mode, setMode] = React.useState<'upcoming' | 'historic'>('upcoming')
+  const [upcomingOpen, setUpcomingOpen] = React.useState(true)
+  const [historicOpen, setHistoricOpen] = React.useState(true)
   const [sports, setSports] = React.useState<string[]>(['football'])
   const [countries, setCountries] = React.useState<string[]>([])
   const [leagues, setLeagues] = React.useState<string[]>([])
@@ -280,7 +290,7 @@ function OddsHarvesterForm() {
   ])
   const [dateStart, setDateStart] = React.useState(formatDateInput(new Date()))
   const [dateEnd, setDateEnd] = React.useState(formatDateInput(new Date()))
-  const [season, setSeason] = React.useState(`${currentSeasonStartYear()}-${currentSeasonStartYear() + 1}`)
+  const [historicSeasons, setHistoricSeasons] = React.useState<string[]>([`${currentSeasonStartYear()}-${currentSeasonStartYear() + 1}`])
   const [headless, setHeadless] = React.useState(true)
   const [showAdvanced, setShowAdvanced] = React.useState(false)
 
@@ -315,6 +325,14 @@ function OddsHarvesterForm() {
 
         const leagueStr = sportLeagues.length > 0 ? sportLeagues.join(',') : undefined
 
+        if (historicOpen && !leagueStr) {
+          throw new Error(`Historic scraping requires at least one league to be selected for ${sport}.`)
+        }
+
+        if (historicOpen && historicSeasons.length === 0) {
+          throw new Error('Select at least one historic season before starting a historic scrape.')
+        }
+
         // Build period-grouped calls: markets with period='all' go without explicit period
         // (server auto-runs extra periods for football); specific periods get explicit calls
         const allPeriodMkts = marketEntries.filter((e) => e.period === 'all').map((e) => e.value)
@@ -337,7 +355,7 @@ function OddsHarvesterForm() {
         }
 
         for (const call of periodCalls) {
-          if (mode === 'upcoming') {
+          if (upcomingOpen) {
             const dates = getDateRange(dateStart, dateEnd)
             for (const d of dates.length > 0 ? dates : [undefined]) {
               const res = await runUpcoming({
@@ -362,28 +380,31 @@ function OddsHarvesterForm() {
               })
               jobs.push({ sport, league: leagueStr ?? 'all', jobId: res.jobId })
             }
-          } else {
-            const res = await runHistoric({
-              data: {
-                sport,
-                season: season.replace('-', ''),
-                markets: call.markets,
-                league: leagueStr,
-                headless,
-                concurrency,
-                requestDelay,
-                previewOnly,
-                bookiesFilter,
-                oddsFormat,
-                oddsHistory,
-                period: call.period,
-                proxyUrl: proxyUrl || undefined,
-                targetBookmaker: targetBookmaker || undefined,
-                matchLinks: matchLinks ? matchLinks.split('\n').map((l) => l.trim()).filter(Boolean) : undefined,
-                outputFormat,
-              },
-            })
-            jobs.push({ sport, league: leagueStr ?? 'all', jobId: res.jobId })
+          }
+          if (historicOpen) {
+            for (const seasonStr of historicSeasons) {
+              const res = await runHistoric({
+                data: {
+                  sport,
+                  season: seasonStr,
+                  markets: call.markets,
+                  league: leagueStr,
+                  headless,
+                  concurrency,
+                  requestDelay,
+                  previewOnly,
+                  bookiesFilter,
+                  oddsFormat,
+                  oddsHistory,
+                  period: call.period,
+                  proxyUrl: proxyUrl || undefined,
+                  targetBookmaker: targetBookmaker || undefined,
+                  matchLinks: matchLinks ? matchLinks.split('\n').map((l) => l.trim()).filter(Boolean) : undefined,
+                  outputFormat,
+                },
+              })
+              jobs.push({ sport, league: leagueStr ?? 'all', jobId: res.jobId })
+            }
           }
         }
       }
@@ -394,17 +415,15 @@ function OddsHarvesterForm() {
     onError: (err) => setError(err instanceof Error ? err.message : 'Scrape failed'),
   })
 
+  const scrapeLabel = upcomingOpen && historicOpen
+    ? '🕷 Scrape Both'
+    : upcomingOpen
+      ? '🕷 Scrape Upcoming'
+      : '🕷 Scrape Historic'
+
   return (
     <Card className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-[var(--sea-ink)]">🕷 OddsHarvester</h2>
-        <Tabs value={mode} onValueChange={(v) => setMode(v as 'upcoming' | 'historic')}>
-          <TabsList>
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="historic">Historic</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+      <h2 className="text-lg font-bold text-[var(--sea-ink)]">🕷 OddsHarvester</h2>
 
       <OddsHarvesterFilters
         sports={sports}
@@ -419,29 +438,81 @@ function OddsHarvesterForm() {
         onMarketEntriesChange={setMarketEntries}
       />
 
-      {/* Time Period */}
-      {mode === 'upcoming' ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1">
-            <Label>Start Date</Label>
-            <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} />
+      {/* Upcoming section */}
+      <div className="overflow-hidden rounded-xl border border-[var(--line)]">
+        <button
+          type="button"
+          onClick={() => setUpcomingOpen((value) => !value)}
+          className="flex w-full items-center justify-between bg-[var(--surface-strong)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--surface-strong)]/80"
+        >
+          <span>📅 Upcoming</span>
+          <svg
+            className={`h-4 w-4 text-[var(--sea-ink-soft)] transition-transform ${upcomingOpen ? 'rotate-180' : ''}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {upcomingOpen && (
+          <div className="px-4 py-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Start Date</Label>
+                <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>End Date</Label>
+                <Input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
+              </div>
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label>End Date</Label>
-            <Input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
+        )}
+      </div>
+
+      {/* Historic section */}
+      <div className="overflow-visible rounded-xl border border-[var(--line)]">
+        <button
+          type="button"
+          onClick={() => setHistoricOpen((value) => !value)}
+          className="flex w-full items-center justify-between bg-[var(--surface-strong)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--surface-strong)]/80"
+        >
+          <span>🗓 Historic</span>
+          <svg
+            className={`h-4 w-4 text-[var(--sea-ink-soft)] transition-transform ${historicOpen ? 'rotate-180' : ''}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {historicOpen && (
+          <div className="space-y-3 px-4 py-4">
+            <div className="space-y-1">
+              <Label>Seasons</Label>
+              <MultiSelect
+                values={historicSeasons}
+                onValuesChange={setHistoricSeasons}
+                placeholder="Select historic seasons..."
+                options={historicSeasonOptions()}
+                searchable
+                searchPlaceholder="Search seasons..."
+                maxVisibleLabels={2}
+                dropdownMode="inline"
+                triggerAriaLabel="Historic seasons"
+                testId="historic-seasons"
+              />
+            </div>
+            <p className="text-xs text-[var(--sea-ink-soft)]">
+              Selected seasons:{' '}
+              <span className="font-medium text-[var(--sea-ink)]">
+                {historicSeasons.length > 0 ? historicSeasons.join(', ') : 'none'}
+              </span>
+            </p>
+            <p className="text-xs text-[var(--sea-ink-soft)]">
+              The current season uses a present range from July {currentSeasonStartYear()} until today.
+            </p>
           </div>
+        )}
         </div>
-      ) : (
-        <div className="space-y-1">
-          <Label>Season</Label>
-          <Select
-            value={season}
-            onValueChange={setSeason}
-            placeholder="Select season"
-            options={seasonOptions()}
-          />
-        </div>
-      )}
 
       {/* Options */}
       <div className="flex items-center gap-4">
@@ -595,14 +666,14 @@ function OddsHarvesterForm() {
       {/* Run Button */}
       <Button
         onClick={() => scrapeMut.mutate()}
-        disabled={scrapeMut.isPending || sports.length === 0}
+        disabled={scrapeMut.isPending || sports.length === 0 || (!upcomingOpen && !historicOpen)}
       >
         {scrapeMut.isPending ? (
           <>
             <Spinner className="h-4 w-4" /> Scraping…
           </>
         ) : (
-          `🕷 Scrape ${mode === 'upcoming' ? 'Upcoming' : 'Historic'}`
+          scrapeLabel
         )}
       </Button>
 

@@ -1,16 +1,23 @@
-import { spawnLogged as spawn } from '#/server/dev-log'
-import { readFile, unlink } from 'node:fs/promises'
-import path from 'node:path'
 import { z } from 'zod'
+import path from 'node:path'
 import { prisma } from '#/db'
 import {
   mapFrontbetHistoricalMatches,
   resolveSoccerdataHistoricalMatches,
 } from '#/server/penaltyblog.helpers'
+import { buildLeagueFilter } from '#/server/leagues'
 import { getMatchHistoryGames, getSofascoreSchedule, getWhoScoredSchedule } from '#/server/soccerdata'
+import { runBridge as runBridgeRaw, resolveBridgePath } from '#/server/bridge'
 
-const PENALTYBLOG_PYTHON = path.resolve(`${import.meta.dirname}/../../../penaltyblog/.venv/bin/python`)
-const PENALTYBLOG_BRIDGE = path.resolve(`${import.meta.dirname}/../../scripts/penaltyblog_bridge.py`)
+const PENALTYBLOG_PYTHON = resolveBridgePath(
+  'PENALTYBLOG_PYTHON',
+  path.resolve(`${import.meta.dirname}/../../../penaltyblog/.venv/bin/python`),
+)
+const PENALTYBLOG_BRIDGE = resolveBridgePath(
+  'PENALTYBLOG_BRIDGE',
+  path.resolve(`${import.meta.dirname}/../../scripts/penaltyblog_bridge.py`),
+)
+const bridgeOpts = { pythonBin: PENALTYBLOG_PYTHON, bridgeScript: PENALTYBLOG_BRIDGE, label: 'penaltyblog' } as const
 
 export type PenaltyblogCatalog = {
   groups: Array<{
@@ -81,88 +88,7 @@ const penaltyblogHistorySchema = z
   })
 
 export async function runBridge<T>(payload: Record<string, unknown>): Promise<T> {
-  const outputPath = `/tmp/frontbet_penaltyblog_${Date.now()}_${Math.random().toString(36).slice(2)}.json`
-
-  return new Promise((resolve, reject) => {
-    const proc = spawn(
-      PENALTYBLOG_PYTHON,
-      [PENALTYBLOG_BRIDGE, '--payload', JSON.stringify(payload), '--output', outputPath],
-      {
-        detached: true,
-        env: {
-          ...process.env,
-          PYTHONUNBUFFERED: '1',
-        },
-      },
-    )
-
-    let stderr = ''
-    proc.stderr.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString()
-    })
-
-    const timeout = setTimeout(() => {
-      try {
-        process.kill(-proc.pid!, 'SIGTERM')
-      } catch {
-        // already exited
-      }
-      reject(new Error('penaltyblog request timed out'))
-    }, 180_000)
-
-    proc.on('close', async (code) => {
-      clearTimeout(timeout)
-
-      try {
-        const text = await readFile(outputPath, 'utf-8')
-        const parsed = JSON.parse(text) as { ok: boolean; result?: T; error?: string }
-        await unlink(outputPath).catch(() => undefined)
-
-        if (!parsed.ok || code !== 0) {
-          reject(new Error(parsed.error ?? (stderr.trim() || 'penaltyblog bridge failed')))
-          return
-        }
-
-        resolve(parsed.result as T)
-      } catch (error) {
-        reject(error instanceof Error ? error : new Error('Failed to read penaltyblog response'))
-      }
-    })
-
-    proc.on('error', (error) => {
-      clearTimeout(timeout)
-      reject(error)
-    })
-  })
-}
-
-function buildLeagueFilter(league: string) {
-  const trimmed = league.trim()
-  if (!trimmed) return []
-
-  const terms = new Set<string>([trimmed])
-  const withoutPrefix = trimmed.replace(/^[A-Z]{2,4}-/, '').trim()
-  if (withoutPrefix) terms.add(withoutPrefix)
-
-  // Match exact name AND season-suffixed variants (e.g. "Serie A 2024/2025")
-  // Use startsWith to catch "Serie A" → "Serie A", "Serie A 2024/2025", etc.
-  // Also match via the Job's OddsHarvester league slug (e.g. "italy-serie-a")
-  const filters: Array<Record<string, any>> = []
-  for (const term of terms) {
-    filters.push({ league: { equals: term } })
-    filters.push({ league: { startsWith: `${term} ` } })
-  }
-  // Also match by the job's league slug (OddsHarvester format like "italy-serie-a")
-  // Use endsWith to catch "italy-serie-a" when searching for "serie-a"
-  const slug = trimmed.toLowerCase().replace(/\s+/g, '-')
-  filters.push({ job: { league: { equals: slug } } })
-  filters.push({ job: { league: { endsWith: `-${slug}` } } })
-  if (withoutPrefix !== trimmed) {
-    const withoutPrefixSlug = withoutPrefix.toLowerCase().replace(/\s+/g, '-')
-    filters.push({ job: { league: { equals: withoutPrefixSlug } } })
-    filters.push({ job: { league: { endsWith: `-${withoutPrefixSlug}` } } })
-  }
-  return filters
+  return runBridgeRaw<T>(payload, bridgeOpts)
 }
 
 export async function getPenaltyblogCatalog() {
@@ -239,8 +165,8 @@ export async function getPenaltyblogHistoricalMatches(_input: unknown) {
           },
         )
         allSdMatches.push(...result)
-      } catch {
-        // Skip seasons that fail, continue with others
+      } catch (error) {
+        console.error(`[penaltyblog] Soccerdata history failed for season ${season}:`, error instanceof Error ? error.message : error)
       }
     }
 

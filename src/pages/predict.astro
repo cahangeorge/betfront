@@ -1,5 +1,6 @@
 ---
 import Layout from '#/layouts/Layout.astro';
+import { ErrorBoundary } from '#/components/ErrorBoundary';
 import { PredictionsPanel } from '#/components/PredictionsPanel';
 import PredictPillarPanel from '#/components/PredictPillarPanel';
 import { TrainPredictTab } from '#/components/predict/TrainPredictTab';
@@ -35,7 +36,7 @@ const tab = Astro.url.searchParams.get('tab') ?? 'pillar';
       </nav>
 
       {tab === 'pillar' && <PredictPillarPanel client:load />}
-      {tab === 'prediction' && <PredictionsPanel client:load />}
+      {tab === 'prediction' && <ErrorBoundary><PredictionsPanel client:load /></ErrorBoundary>}
       {tab === 'train' && <TrainPredictTab client:load />}
       {tab === 'analytics' && <AnalyticsPanel client:load />}
       {tab === 'backtest' && <BacktestTab client:load />}

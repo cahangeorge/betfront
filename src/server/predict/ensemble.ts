@@ -13,18 +13,27 @@ async function computeBrierWeights(modelKeys: readonly string[], league: string)
   const weights: Record<string, number> = {}
   let allUniform = true
 
+  const allRows = await prisma.modelPrediction.findMany({
+    where: {
+      modelKey: { in: [...modelKeys] },
+      market: '1x2',
+      run: { source: 'single', league: { contains: league }, status: 'success' },
+      match: { homeScore: { not: null }, awayScore: { not: null } },
+    },
+    take: 600 * modelKeys.length,
+    orderBy: { id: 'desc' },
+    include: { match: { select: { homeScore: true, awayScore: true } } },
+  })
+
+  const byModel = new Map<string, typeof allRows>()
+  for (const r of allRows) {
+    const existing = byModel.get(r.modelKey) ?? []
+    existing.push(r)
+    byModel.set(r.modelKey, existing)
+  }
+
   for (const modelKey of modelKeys) {
-    const rows = await prisma.modelPrediction.findMany({
-      where: {
-        modelKey,
-        market: '1x2',
-        run: { source: 'single', league: { contains: league }, status: 'success' },
-        match: { homeScore: { not: null }, awayScore: { not: null } },
-      },
-      take: 600,
-      orderBy: { id: 'desc' },
-      include: { match: { select: { homeScore: true, awayScore: true } } },
-    })
+    const rows = byModel.get(modelKey) ?? []
 
     // Group by matchId so we have all 3 outcomes per match.
     const byMatch = new Map<number, { home?: number; draw?: number; away?: number; hs: number; as: number }>()
@@ -173,7 +182,13 @@ export async function runEnsemblePrediction(_input: unknown) {
         },
       })
     }
-  })()
+  })().catch((error) => {
+    console.error('[predict] unhandled error in background ensemble run:', error)
+    prisma.predictionRun.update({
+      where: { id: run.id },
+      data: { status: 'failed', finishedAt: new Date(), error: error instanceof Error ? error.message : String(error) },
+    }).catch(() => {})
+  })
 
   return { runId: run.id, status: run.status }
 }

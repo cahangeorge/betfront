@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   runSingleModelPrediction,
   runEnsemblePrediction,
@@ -24,6 +24,18 @@ import {
   SportCountryLeaguePicker,
   useSportCountryLeagues,
 } from '#/components/SportCountryLeaguePicker'
+import {
+  buildEnsemblePredictionRunInput,
+  buildPredictionRunIdInput,
+  buildSinglePredictionRunInput,
+} from '#/components/predictPillarPanel.helpers'
+import { useUrlSearchParam } from '#/lib/router'
+
+const PILLAR_TABS = ['single', 'ensemble', 'runs'] as const
+
+function isPillarTab(value: string): value is (typeof PILLAR_TABS)[number] {
+  return PILLAR_TABS.includes(value as (typeof PILLAR_TABS)[number])
+}
 
 const TARGET_OPTIONS = [
   { value: 'future', label: 'Future fixtures' },
@@ -106,17 +118,15 @@ function SingleTab({ catalog }: { catalog: any }) {
 
   const run = useMutation({
     mutationFn: () =>
-      runSingleModelPrediction({
-        data: {
-          modelKey,
-          league: picker.primaryLeague,
-          markets: markets as any,
-          targetMode,
-          trainingMode,
-          trainingLimit: Number(trainingLimit),
-          targetLimit: Number(targetLimit),
-        } as any,
-      }),
+      runSingleModelPrediction(buildSinglePredictionRunInput({
+        modelKey,
+        league: picker.primaryLeague,
+        markets,
+        targetMode,
+        trainingMode,
+        trainingLimit: Number(trainingLimit),
+        targetLimit: Number(targetLimit),
+      }) as any),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['prediction-runs'] }),
   })
 
@@ -188,16 +198,14 @@ function EnsembleTab({ catalog }: { catalog: any }) {
 
   const run = useMutation({
     mutationFn: () =>
-      runEnsemblePrediction({
-        data: {
-          modelKeys: [...selected],
-          league: picker.primaryLeague,
-          weighting,
-          targetMode,
-          markets: markets as any,
-          targetLimit: Number(targetLimit),
-        } as any,
-      }),
+      runEnsemblePrediction(buildEnsemblePredictionRunInput({
+        modelKeys: [...selected],
+        league: picker.primaryLeague,
+        weighting,
+        targetMode,
+        markets,
+        targetLimit: Number(targetLimit),
+      }) as any),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['prediction-runs'] }),
   })
 
@@ -209,6 +217,11 @@ function EnsembleTab({ catalog }: { catalog: any }) {
       return next
     })
   }
+
+  useEffect(() => {
+    if (allModels.length === 0 || selected.size > 0) return
+    setSelected(new Set(allModels.slice(0, 3)))
+  }, [allModels, selected.size])
 
   return (
     <Card>
@@ -285,7 +298,7 @@ function EnsembleTab({ catalog }: { catalog: any }) {
 function RunDetail({ runId, onClose }: { runId: number; onClose: () => void }) {
   const detail = useQuery({
     queryKey: ['prediction-run', runId],
-    queryFn: () => getPredictionRun({ data: { runId } as any }),
+    queryFn: () => getPredictionRun(buildPredictionRunIdInput(runId) as any),
   })
 
   const data = detail.data as any
@@ -356,11 +369,11 @@ function RunsTab() {
   const runs = useQuery({
     queryKey: ['prediction-runs'],
     queryFn: () => listPredictionRuns(),
-    refetchInterval: 4000,
+    refetchInterval: (q: any) => document.hidden ? false : 4000,
   })
 
   const del = useMutation({
-    mutationFn: (runId: number) => deletePredictionRun({ data: { runId } as any }),
+    mutationFn: (runId: number) => deletePredictionRun(buildPredictionRunIdInput(runId) as any),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['prediction-runs'] }),
   })
 
@@ -429,10 +442,11 @@ export default function PredictPillarPanel() {
     queryFn: () => getPredictCatalog(),
   })
   const catalog = catalogQuery.data as any
-  const [tab, setTab] = useState('single')
+  const [tabParam, setTabParam] = useUrlSearchParam('pillarTab', 'single')
+  const tab = isPillarTab(tabParam) ? tabParam : 'single'
 
   return (
-    <Tabs value={tab} onValueChange={setTab}>
+    <Tabs value={tab} onValueChange={setTabParam}>
       <TabsList>
         <TabsTrigger value="single">🎯 Single Model</TabsTrigger>
         <TabsTrigger value="ensemble">🧬 Ensemble</TabsTrigger>

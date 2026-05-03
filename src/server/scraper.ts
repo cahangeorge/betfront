@@ -11,6 +11,7 @@ import {
   buildHistoricArgs,
   buildUpcomingArgs,
   parseProgress,
+  reconcileOrphanedRunningJobs,
   runCli,
   runCliSimple,
   runningProcesses,
@@ -45,6 +46,13 @@ export async function getHistorySources() {
 export async function runUpcoming(_input: unknown) {
   const data = ((d: UpcomingInput) => upcomingParamsSchema.parse(d))(_input as any)
 
+  const existing = await prisma.scrapeJob.findFirst({
+    where: { command: 'upcoming', status: 'running', sport: data.sport, league: data.league ?? null, date: data.date ?? null },
+  })
+  if (existing) {
+    return { jobId: existing.id }
+  }
+
   const job = await prisma.scrapeJob.create({
     data: {
       command: 'upcoming',
@@ -77,8 +85,11 @@ export async function runUpcoming(_input: unknown) {
         }
       }
     })
-    .catch(() => {
-      /* errors already written to DB by runCli */
+    .catch((error) => {
+      prisma.scrapeJob.update({
+        where: { id: job.id },
+        data: { status: 'failed', output: error instanceof Error ? error.message : String(error) },
+      }).catch(() => {})
     })
 
   return { jobId: job.id }
@@ -86,6 +97,13 @@ export async function runUpcoming(_input: unknown) {
 
 export async function runHistoric(_input: unknown) {
   const data = ((d: HistoricInput) => historicParamsSchema.parse(d))(_input as any)
+
+  const existing = await prisma.scrapeJob.findFirst({
+    where: { command: 'historic', status: 'running', sport: data.sport, league: data.league ?? null, season: data.season ?? null },
+  })
+  if (existing) {
+    return { jobId: existing.id }
+  }
 
   const job = await prisma.scrapeJob.create({
     data: {
@@ -118,8 +136,11 @@ export async function runHistoric(_input: unknown) {
         }
       }
     })
-    .catch(() => {
-      /* errors already written to DB by runCli */
+    .catch((error) => {
+      prisma.scrapeJob.update({
+        where: { id: job.id },
+        data: { status: 'failed', output: error instanceof Error ? error.message : String(error) },
+      }).catch(() => {})
     })
 
   return { jobId: job.id }
@@ -128,6 +149,8 @@ export async function runHistoric(_input: unknown) {
 // ─── Job + match queries ─────────────────────────────────────────────────────
 
 export async function getJobs(_input?: unknown) {
+  await reconcileOrphanedRunningJobs()
+
   const filter = (_input ?? {}) as { source?: string }
   const where = filter.source ? { source: filter.source } : {}
   const rows = await prisma.scrapeJob.findMany({
@@ -192,6 +215,8 @@ export async function getJobOutput(_input: unknown) {
 
 // Return all currently running scrape jobs (for resuming after page refresh)
 export async function getRunningJobs() {
+  await reconcileOrphanedRunningJobs()
+
   return prisma.scrapeJob.findMany({
     where: { status: 'running' },
     select: { id: true, command: true, league: true, startedAt: true },
@@ -287,7 +312,12 @@ export async function restartJob(_input: unknown) {
           }
         }
       })
-      .catch(() => {})
+      .catch((error) => {
+        prisma.scrapeJob.update({
+          where: { id: newJob.id },
+          data: { status: 'failed', output: error instanceof Error ? error.message : String(error) },
+        }).catch(() => {})
+      })
   } else {
     const params = historicParamsSchema.parse({
       sport: original.sport,
@@ -311,7 +341,12 @@ export async function restartJob(_input: unknown) {
           }
         }
       })
-      .catch(() => {})
+      .catch((error) => {
+        prisma.scrapeJob.update({
+          where: { id: newJob.id },
+          data: { status: 'failed', output: error instanceof Error ? error.message : String(error) },
+        }).catch(() => {})
+      })
   }
 
   return { jobId: newJob.id }

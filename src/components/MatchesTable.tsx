@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useQuery, useQueryClient } from '#/lib/query'
 import { ChevronUpIcon, ChevronDownIcon } from '@radix-ui/react-icons'
-import { getMatches, deleteMatches } from '#/lib/client-actions/scraper'
+import { getMatches, deleteMatches, getLeagueCatalog, type LeagueCatalogItem } from '#/lib/client-actions/scraper'
 import { Card, Input, Spinner, Badge } from '#/components/ui'
 import { cn } from '#/lib/cn'
 
@@ -77,6 +77,100 @@ function formatMatchDate(value: string | null) {
 type SortKey = 'matchDate' | 'sport'
 type SortDir = 'asc' | 'desc'
 
+function formatSlugLabel(value: string) {
+  return value
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function slugify(value: string) {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function getCountryLabel(match: Match, catalog: LeagueCatalogItem[] = []) {
+  const normalizedLeague = slugify(match.league ?? '')
+
+  if (match.job.league) {
+    const candidates = match.job.league
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+
+    for (const candidate of candidates) {
+      const parts = candidate.split('-')
+      if (parts.length < 2) continue
+      const country = parts[0]
+      const leagueSlug = parts.slice(1).join('-')
+      if (
+        normalizedLeague &&
+        (leagueSlug === normalizedLeague ||
+          leagueSlug.endsWith(normalizedLeague) ||
+          normalizedLeague.endsWith(leagueSlug))
+      ) {
+        return formatSlugLabel(country)
+      }
+    }
+  }
+
+  const normalizedLeagueName = (match.league ?? '').trim().toLowerCase()
+  const catalogMatch = catalog.find((item) => {
+    if (item.sport !== match.sport) return false
+    return (
+      item.leagueLabel.toLowerCase() === normalizedLeagueName ||
+      item.league === normalizedLeague ||
+      item.urlLeague === normalizedLeague
+    )
+  })
+  if (catalogMatch) {
+    return catalogMatch.countryLabel
+  }
+
+  if (match.matchUrl) {
+    try {
+      const pathname = new URL(match.matchUrl).pathname.split('/').filter(Boolean)
+      const country = pathname[1]
+      if (country && country !== 'h2h') {
+        return formatSlugLabel(country)
+      }
+    } catch {
+      // Ignore invalid URLs and fall back to league parsing.
+    }
+  }
+
+  const league = match.league ?? ''
+  if (league.includes('-')) {
+    const country = league.split('-')[0]
+    if (country) {
+      return formatSlugLabel(country)
+    }
+  }
+
+  return 'Other'
+}
+
+type LeagueGroup = {
+  league: string
+  rows: Match[]
+}
+
+type CountryGroup = {
+  country: string
+  leagues: LeagueGroup[]
+}
+
+type JobGroup = {
+  jobId: number
+  rows: Match[]
+  countries: CountryGroup[]
+}
+
 
 
 export function MatchesTable({
@@ -96,6 +190,9 @@ export function MatchesTable({
   const [expandedRows, setExpandedRows] = React.useState<Set<number>>(new Set())
   const [selectedLeagues, setSelectedLeagues] = React.useState<Set<string>>(new Set())
   const [selectedMatchIds, setSelectedMatchIds] = React.useState<Set<number>>(new Set())
+  const [collapsedJobs, setCollapsedJobs] = React.useState<Set<number>>(new Set())
+  const [collapsedCountries, setCollapsedCountries] = React.useState<Set<string>>(new Set())
+  const [collapsedLeagueGroups, setCollapsedLeagueGroups] = React.useState<Set<string>>(new Set())
   const [isDeleting, setIsDeleting] = React.useState(false)
 
   const queryClient = useQueryClient()
@@ -104,6 +201,12 @@ export function MatchesTable({
     queryKey: ['matches', jobId, dateFrom, dateTo],
     queryFn: () => getMatches({ data: { jobId, dateFrom, dateTo } }),
     staleTime: 30_000,
+  })
+
+  const { data: leagueCatalog = [] } = useQuery<LeagueCatalogItem[]>({
+    queryKey: ['leagueCatalog'],
+    queryFn: () => getLeagueCatalog(),
+    staleTime: 10 * 60_000,
   })
 
   // Auto-expand rows with odds when query key changes (not on arbitrary re-renders)
@@ -128,6 +231,9 @@ export function MatchesTable({
     setTeamFilter('')
     setSelectedMatchIds(new Set())
     setExpandedRows(new Set())
+    setCollapsedJobs(new Set())
+    setCollapsedCountries(new Set())
+    setCollapsedLeagueGroups(new Set())
   }, [dateFrom, dateTo, jobId])
 
   function toggleLeague(lg: string) {
@@ -153,6 +259,33 @@ export function MatchesTable({
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
+      return next
+    })
+  }
+
+  function toggleJobGroup(id: number) {
+    setCollapsedJobs((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleCountryGroup(key: string) {
+    setCollapsedCountries((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  function toggleLeagueGroup(key: string) {
+    setCollapsedLeagueGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       return next
     })
   }
@@ -228,7 +361,7 @@ export function MatchesTable({
   }, [matches, selectedLeagues, teamFilter, sortKey, sortDir])
 
   // Group display rows by jobId (most recent job first)
-  const groupedRows = React.useMemo(() => {
+  const groupedRows = React.useMemo<JobGroup[]>(() => {
     const map = new Map<number, Match[]>()
     for (const row of displayRows) {
       const existing = map.get(row.jobId)
@@ -237,8 +370,36 @@ export function MatchesTable({
     }
     return Array.from(map.entries())
       .sort(([a], [b]) => b - a)
-      .map(([jobId, rows]) => ({ jobId, rows }))
-  }, [displayRows])
+      .map(([jobId, rows]) => {
+        const countryMap = new Map<string, Match[]>()
+        for (const row of rows) {
+          const country = getCountryLabel(row, leagueCatalog)
+          const existing = countryMap.get(country)
+          if (existing) existing.push(row)
+          else countryMap.set(country, [row])
+        }
+
+        const countries = Array.from(countryMap.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([country, countryRows]) => {
+            const leagueMap = new Map<string, Match[]>()
+            for (const row of countryRows) {
+              const league = row.league ?? 'Other'
+              const existing = leagueMap.get(league)
+              if (existing) existing.push(row)
+              else leagueMap.set(league, [row])
+            }
+
+            const leagues = Array.from(leagueMap.entries())
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([league, leagueRows]) => ({ league, rows: leagueRows }))
+
+            return { country, leagues }
+          })
+
+        return { jobId, rows, countries }
+      })
+  }, [displayRows, leagueCatalog])
 
   const totalFiltered = displayRows.length
   const allVisibleSelected = displayRows.length > 0 && displayRows.every((m) => selectedMatchIds.has(m.id))
@@ -405,11 +566,12 @@ export function MatchesTable({
               </tr>
             </thead>
             <tbody>
-              {groupedRows.map(({ jobId, rows: groupRows }) => {
+              {groupedRows.map(({ jobId, rows: groupRows, countries }) => {
                 const job = groupRows[0]?.job
                 const jobLabel = job
                   ? `${job.command} · ${job.sport}${job.league ? ` · ${job.league}` : ''}`
                   : ''
+                const jobCollapsed = collapsedJobs.has(jobId)
                 return (
                 <React.Fragment key={jobId}>
                   {/* Job group header */}
@@ -430,8 +592,10 @@ export function MatchesTable({
                     </td>
                     <td
                       colSpan={7}
-                      className="py-2 pr-4 text-xs font-bold uppercase tracking-widest text-[var(--lagoon-deep)]"
+                      className="py-2 pr-4 text-xs font-bold uppercase tracking-widest text-[var(--lagoon-deep)] cursor-pointer"
+                      onClick={() => toggleJobGroup(jobId)}
                     >
+                      <span className="mr-2 text-[var(--sea-ink-soft)]">{jobCollapsed ? '▸' : '▾'}</span>
                       <span className="font-mono">#{jobId}</span>
                       {jobLabel && (
                         <span className="ml-2 font-normal normal-case text-[var(--sea-ink-soft)] tracking-normal">{jobLabel}</span>
@@ -441,7 +605,35 @@ export function MatchesTable({
                       </span>
                     </td>
                   </tr>
-                  {groupRows.map((match) => (
+                  {!jobCollapsed && countries.map(({ country, leagues }) => {
+                    const countryKey = `${jobId}:${country}`
+                    const countryCollapsed = collapsedCountries.has(countryKey)
+                    const countryCount = leagues.reduce((sum, leagueGroup) => sum + leagueGroup.rows.length, 0)
+                    return (
+                      <React.Fragment key={countryKey}>
+                        <tr className="bg-[var(--sand)]/35 border-b border-[var(--line)]/30">
+                          <td className="px-3 py-2" />
+                          <td colSpan={7} className="py-2 pr-4 text-xs font-semibold text-[var(--sea-ink)] cursor-pointer" onClick={() => toggleCountryGroup(countryKey)}>
+                            <span className="mr-2 text-[var(--sea-ink-soft)]">{countryCollapsed ? '▸' : '▾'}</span>
+                            <span className="uppercase tracking-wide">{country}</span>
+                            <span className="ml-2 text-[var(--sea-ink-soft)]">({countryCount})</span>
+                          </td>
+                        </tr>
+                        {!countryCollapsed && leagues.map(({ league, rows: leagueRows }) => {
+                          const leagueKey = `${countryKey}:${league}`
+                          const leagueCollapsed = collapsedLeagueGroups.has(leagueKey)
+                          return (
+                            <React.Fragment key={leagueKey}>
+                              <tr className="border-b border-[var(--line)]/20 bg-[var(--surface)]/40">
+                                <td className="px-3 py-2" />
+                                <td className="px-2 py-2" />
+                                <td colSpan={6} className="py-2 pr-4 text-xs text-[var(--sea-ink-soft)] cursor-pointer" onClick={() => toggleLeagueGroup(leagueKey)}>
+                                  <span className="mr-2 text-[var(--sea-ink-soft)]">{leagueCollapsed ? '▸' : '▾'}</span>
+                                  <span className="font-medium text-[var(--sea-ink)]">{league}</span>
+                                  <span className="ml-2">({leagueRows.length})</span>
+                                </td>
+                              </tr>
+                              {!leagueCollapsed && leagueRows.map((match) => (
                     <React.Fragment key={match.id}>
                       <tr
                         className={cn(
@@ -502,7 +694,13 @@ export function MatchesTable({
                         </tr>
                       )}
                     </React.Fragment>
-                  ))}
+                              ))}
+                            </React.Fragment>
+                          )
+                        })}
+                      </React.Fragment>
+                    )
+                  })}
                 </React.Fragment>
                 )
               })}

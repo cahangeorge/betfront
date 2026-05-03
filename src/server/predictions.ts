@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { prisma } from '#/db'
+import { checkRateLimit } from '#/server/rate-limit'
+import { mapPredictionRunToHistorySession, type HistorySessionWithStats } from './predictionHistory.helpers'
 import {
   runSingleModelPrediction as _runSingleModelPrediction,
 } from './predict/engine'
@@ -20,10 +22,21 @@ import {
 // ─── Phase 3 predict pillar wrappers (picked up by gen-actions.mjs) ──────
 
 export async function runSingleModelPrediction(_input: unknown) {
+  const input = _input as any
+  const modelKey = input?.modelKey ?? 'unknown'
+  if (!checkRateLimit(`predict:${modelKey}`, 3, 60_000)) {
+    throw new Error('Rate limit exceeded. Please wait before running another prediction.')
+  }
   return _runSingleModelPrediction(_input)
 }
 
 export async function runEnsemblePrediction(_input: unknown) {
+  const input = _input as any
+  const modelKeys = (input?.modelKeys as string[]) ?? ['unknown']
+  const rateLimitKey = `predict:ensemble:${modelKeys.sort().join(',')}`
+  if (!checkRateLimit(rateLimitKey, 3, 60_000)) {
+    throw new Error('Rate limit exceeded. Please wait before running another prediction.')
+  }
   return _runEnsemblePrediction(_input)
 }
 
@@ -129,91 +142,7 @@ export type PredictionRow = {
   expectedValue: number | null
 }
 
-export type SessionWithStats = {
-  id: number
-  league: string
-  source: string
-  model: string
-  config: string | null
-  matchCount: number
-  createdAt: string
-  predictions: Array<{
-    id: number
-    homeTeam: string
-    awayTeam: string
-    matchDate: string | null
-    league: string | null
-    homeWinProb: number | null
-    drawProb: number | null
-    awayWinProb: number | null
-    predictedGoalsHome: number | null
-    predictedGoalsAway: number | null
-    predictedOutcome: string | null
-    confidence: number | null
-    dc1X: number | null
-    dcX2: number | null
-    dc12: number | null
-    dnbHome: number | null
-    dnbAway: number | null
-    over15: number | null
-    under15: number | null
-    over25: number | null
-    under25: number | null
-    over35: number | null
-    under35: number | null
-    bttsYes: number | null
-    bttsNo: number | null
-    ahHome: number | null
-    ahAway: number | null
-    htHomeWinProb: number | null
-    htDrawProb: number | null
-    htAwayWinProb: number | null
-    htGoalsHome: number | null
-    htGoalsAway: number | null
-    htDc1X: number | null
-    htDcX2: number | null
-    htDc12: number | null
-    htDnbHome: number | null
-    htDnbAway: number | null
-    htOver15: number | null
-    htUnder15: number | null
-    htOver25: number | null
-    htUnder25: number | null
-    htOver35: number | null
-    htUnder35: number | null
-    htBttsYes: number | null
-    htBttsNo: number | null
-    htAhHome: number | null
-    htAhAway: number | null
-    shHomeWinProb: number | null
-    shDrawProb: number | null
-    shAwayWinProb: number | null
-    shGoalsHome: number | null
-    shGoalsAway: number | null
-    shDc1X: number | null
-    shDcX2: number | null
-    shDc12: number | null
-    shDnbHome: number | null
-    shDnbAway: number | null
-    shOver15: number | null
-    shUnder15: number | null
-    shOver25: number | null
-    shUnder25: number | null
-    shOver35: number | null
-    shUnder35: number | null
-    shBttsYes: number | null
-    shBttsNo: number | null
-    shAhHome: number | null
-    shAhAway: number | null
-    isValueBet: boolean
-    valueBetMarket: string | null
-    bookmakerOdds: number | null
-    expectedValue: number | null
-    actualOutcome: string | null
-    isCorrect: boolean | null
-    createdAt: string
-  }>
-}
+export type SessionWithStats = HistorySessionWithStats
 
 // ─── Save a prediction session ────────────────────────────────────────────────
 
@@ -390,18 +319,51 @@ export async function savePredictionSession(_input: unknown) {
 // ─── List prediction sessions ─────────────────────────────────────────────────
 
 export async function getPredictionSessions() {
-    const sessions = await prisma.predictionSession.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: { predictions: true },
-    })
-    return sessions.map((s) => ({
+    const { getCurrentUserId } = await import('#/server/auth/context')
+    const userId = getCurrentUserId()
+
+    const [sessions, runs] = await Promise.all([
+      prisma.predictionSession.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: { predictions: true },
+      }),
+      prisma.predictionRun.findMany({
+        where: {
+          status: 'success',
+          ...(userId ? { OR: [{ userId }, { userId: null }] } : {}),
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          modelPredictions: {
+            include: {
+              match: { select: { id: true, homeTeam: true, awayTeam: true, matchDate: true, league: true, homeScore: true, awayScore: true } },
+            },
+          },
+          ensemblePredictions: {
+            include: {
+              match: { select: { id: true, homeTeam: true, awayTeam: true, matchDate: true, league: true, homeScore: true, awayScore: true } },
+            },
+          },
+        },
+      }),
+    ])
+
+    const legacySessions = sessions.map((s) => ({
       ...s,
       createdAt: s.createdAt.toISOString(),
       predictions: s.predictions.map((p) => ({
         ...p,
         createdAt: p.createdAt.toISOString(),
       })),
-    })) as SessionWithStats[]
+    }))
+
+    const runSessions = runs
+      .map((run) => mapPredictionRunToHistorySession(run))
+      .filter((run): run is HistorySessionWithStats => run != null)
+
+    return [...legacySessions, ...runSessions].sort(
+      (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
+    ) as SessionWithStats[]
   
 }
 // ─── Delete a prediction session ──────────────────────────────────────────────
@@ -409,7 +371,11 @@ export async function getPredictionSessions() {
 export async function deletePredictionSession(_input: unknown) {
   const data = ((data: unknown) => z.object({ sessionId: z.number() }).parse(data))(_input as any);
 
-    await prisma.predictionSession.delete({ where: { id: data.sessionId } })
+    if (data.sessionId < 0) {
+      await prisma.predictionRun.delete({ where: { id: Math.abs(data.sessionId) } })
+    } else {
+      await prisma.predictionSession.delete({ where: { id: data.sessionId } })
+    }
     return { ok: true }
   
 }

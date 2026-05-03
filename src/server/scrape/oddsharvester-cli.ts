@@ -12,8 +12,52 @@ export const ODDSHARVESTER_BIN = path.resolve(
   `${import.meta.dirname}/../../../../OddsHarvester/.venv/bin/oddsharvester`,
 )
 
-// Track running child processes so we can kill them on cancel
-export const runningProcesses = new Map<number, ReturnType<typeof spawn>>()
+type ScraperRuntimeState = {
+  runningProcesses: Map<number, ReturnType<typeof spawn>>
+  startupReconcilePromise?: Promise<void>
+}
+
+const scraperRuntime = ((globalThis as typeof globalThis & {
+  __betfrontScraperRuntime?: ScraperRuntimeState
+}).__betfrontScraperRuntime ??= {
+  runningProcesses: new Map<number, ReturnType<typeof spawn>>(),
+})
+
+// Track running child processes so we can kill them on cancel.
+// Stored on globalThis to survive dev-server module reloads.
+export const runningProcesses = scraperRuntime.runningProcesses
+
+export async function reconcileOrphanedRunningJobs() {
+  if (scraperRuntime.startupReconcilePromise) {
+    return scraperRuntime.startupReconcilePromise
+  }
+
+  scraperRuntime.startupReconcilePromise = (async () => {
+    const runningJobs = await prisma.scrapeJob.findMany({
+      where: { source: 'OddsHarvester', status: 'running' },
+      select: { id: true, output: true },
+    })
+
+    await Promise.all(
+      runningJobs
+        .filter((job) => !runningProcesses.has(job.id))
+        .map((job) =>
+          prisma.scrapeJob.update({
+            where: { id: job.id },
+            data: {
+              status: 'failed',
+              finishedAt: new Date(),
+              output: job.output
+                ? `${job.output}\n\nMarked failed after server restart; the scraper process was no longer attached.`
+                : 'Marked failed after server restart; the scraper process was no longer attached.',
+            },
+          }),
+        ),
+    )
+  })().catch(() => {})
+
+  return scraperRuntime.startupReconcilePromise
+}
 
 export function buildUpcomingArgs(params: UpcomingParams, outputPath: string): string[] {
   const args: string[] = ['upcoming', '-s', params.sport]
@@ -83,6 +127,22 @@ export async function runCli(args: string[], jobId: number): Promise<{ output: s
 
     let output = ''
     let flushedLen = 0
+    let settled = false
+
+    const settle = async (out: string, success: boolean) => {
+      if (settled) return
+      settled = true
+      clearInterval(flushInterval)
+      runningProcesses.delete(jobId)
+      const slice = out.length > 300000 ? out.slice(out.length - 300000) : out
+      await prisma.scrapeJob
+        .update({
+          where: { id: jobId },
+          data: { status: success ? 'success' : 'failed', output: slice, finishedAt: new Date() },
+        })
+        .catch(() => {})
+      resolve({ output: out, success })
+    }
 
     // Flush accumulated output to DB every 2s so clients can stream it in real-time
     const flushInterval = setInterval(async () => {
@@ -103,19 +163,13 @@ export async function runCli(args: string[], jobId: number): Promise<{ output: s
       output += d.toString()
     })
 
+    proc.on('error', async (err) => {
+      output += `\nError: ${err.message}\n`
+      await settle(output, false)
+    })
+
     proc.on('close', async (code) => {
-      clearInterval(flushInterval)
-      runningProcesses.delete(jobId)
-      const success = code === 0
-      await prisma.scrapeJob.update({
-        where: { id: jobId },
-        data: {
-          status: success ? 'success' : 'failed',
-          output: output.length > 300000 ? output.slice(output.length - 300000) : output,
-          finishedAt: new Date(),
-        },
-      })
-      resolve({ output, success })
+      await settle(output, code === 0)
     })
   })
 }
@@ -126,6 +180,7 @@ export async function runCliSimple(args: string[]): Promise<{ success: boolean }
     const proc = spawn(ODDSHARVESTER_BIN, args, {
       env: { ...process.env, PYTHONUNBUFFERED: '1' },
     })
+    proc.on('error', () => resolve({ success: false }))
     proc.on('close', (code) => resolve({ success: code === 0 }))
   })
 }
