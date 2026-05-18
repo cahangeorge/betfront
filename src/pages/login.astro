@@ -2,9 +2,10 @@
 import Layout from '#/layouts/Layout.astro';
 import { AuthForm } from '#/components/AuthForm';
 
-if (Astro.locals.user) return Astro.redirect('/');
+if (Astro.locals.user) return Astro.redirect('/betfront/');
 
-const next = new URL(Astro.request.url).searchParams.get('next') ?? '/';
+let next = new URL(Astro.request.url).searchParams.get('next') ?? '/betfront/';
+if (next === '/') next = '/betfront/';
 ---
 
 <Layout title="Betfront — Login">
@@ -17,7 +18,7 @@ const next = new URL(Astro.request.url).searchParams.get('next') ?? '/';
       </div>
       <AuthForm mode="login" next={next} client:load />
       <p class="text-center text-sm text-[var(--sea-ink-soft)]">
-        No account? <a href={`/signup?next=${encodeURIComponent(next)}`} class="text-[var(--lagoon-deep)] font-medium">Create one</a>
+        No account? <a href={`/betfront/signup?next=${encodeURIComponent(next)}`} class="text-[var(--lagoon-deep)] font-medium">Create one</a>
       </p>
     </div>
   </main>

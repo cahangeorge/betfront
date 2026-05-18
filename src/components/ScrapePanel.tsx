@@ -127,7 +127,7 @@ function FutureTab() {
             Run upcoming scrape
           </Button>
           <span className="text-xs text-[var(--sea-ink-soft)]">
-            For full historic + advanced filters, use the <a className="underline" href="/data">Data Hub</a>.
+            For full historic + advanced filters, use the <a className="underline" href="/betfront/data">Data Hub</a>.
           </span>
         </div>
       </Card>

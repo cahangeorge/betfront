@@ -2,19 +2,22 @@
 import ThemeToggle from '#/components/ThemeToggle';
 import UserMenu from '#/components/UserMenu';
 
-const path = Astro.url.pathname;
-const isActive = (href: string) =>
-  href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`);
-const user = Astro.locals.user;
+const BETFRONT_BASE = '/betfront'
 
 const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/data', label: 'Data' },
-  { href: '/predict', label: 'Predict' },
-  { href: '/tickets', label: 'Tickets' },
-  { href: '/jobs', label: 'Jobs' },
-  { href: '/account', label: 'Account' },
+  { href: `${BETFRONT_BASE}/`, label: 'Home' },
+  { href: `${BETFRONT_BASE}/data`, label: 'Data' },
+  { href: `${BETFRONT_BASE}/predict`, label: 'Predict' },
+  { href: `${BETFRONT_BASE}/tickets`, label: 'Tickets' },
+  { href: `${BETFRONT_BASE}/jobs`, label: 'Jobs' },
+  { href: `${BETFRONT_BASE}/account`, label: 'Account' },
 ];
+
+const path = Astro.url.pathname;
+const isActive = (href: string) =>
+  href === `${BETFRONT_BASE}/` ? path === `${BETFRONT_BASE}/` : path === href || path.startsWith(`${href}/`);
+
+const user = Astro.locals.user;
 ---
 
 <header
@@ -23,7 +26,7 @@ const navLinks = [
   <div class="page-wrap flex items-center h-14 px-4 gap-3">
     <!-- Brand -->
     <a
-      href="/"
+      href={`${BETFRONT_BASE}/`}
       class="flex-shrink-0 inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] no-underline shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] transition-shadow"
     >
       <span class="h-2 w-2 rounded-full bg-[linear-gradient(135deg,#56c6be,#7ed3bf)] flex-shrink-0"></span>

@@ -26,11 +26,11 @@ const dateTo = params.get('dateTo') ?? today;
 
       <nav class="tab-bar -mx-4 px-4" aria-label="Data tabs">
         <a
-          href="/data?tab=scrape"
+          href="/betfront/data?tab=scrape"
           class:list={['tab-pill', { 'is-active': tab === 'scrape' }]}>🕷 Scrape</a
         >
         <a
-          href="/data?tab=history"
+          href="/betfront/data?tab=history"
           class:list={['tab-pill', { 'is-active': tab === 'history' }]}>📊 History</a
         >
       </nav>

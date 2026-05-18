@@ -15,7 +15,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
     setLoading(true)
     setError(null)
     try {
-      const url = mode === 'login' ? '/api/auth/login' : '/api/auth/signup'
+      const url = mode === 'login' ? '/betfront/api/auth/login' : '/betfront/api/auth/signup'
       const body =
         mode === 'login'
           ? { email, password }
@@ -29,7 +29,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
       if (!res.ok) {
         throw new Error((data as any)?.error ?? `Request failed (${res.status})`)
       }
-      window.location.href = next || '/'
+      window.location.href = (next || '/').replace(/^\/(?!betfront)/, '/betfront/')
     } catch (err: any) {
       setError(String(err?.message ?? err))
       setLoading(false)
