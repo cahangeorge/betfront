@@ -11,7 +11,6 @@ export default defineConfig({
   adapter: node({ mode: 'standalone' }),
   integrations: [react(), devToolbarApps()],
   server: { host: '0.0.0.0', port: 3001, allowedHosts: ['omnestack.com', 'www.omnestack.com'] },
-  base: '/betfront',
   vite: {
     plugins: [tailwindcss()],
     ssr: {

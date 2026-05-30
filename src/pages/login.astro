@@ -2,15 +2,15 @@
 import Layout from '#/layouts/Layout.astro';
 import { AuthForm } from '#/components/AuthForm';
 
-if (Astro.locals.user) return Astro.redirect('/betfront/');
+if (Astro.locals.user) return Astro.redirect('/');
 
-let next = new URL(Astro.request.url).searchParams.get('next') ?? '/betfront/';
-if (next === '/') next = '/betfront/';
+let next = new URL(Astro.request.url).searchParams.get('next') ?? '/';
+if (next === '/') next = '/';
 ---
 
 <Layout title="Betfront — Login">
-  <main class="page-wrap px-4 pb-12 pt-16">
-    <div class="mx-auto max-w-md space-y-6">
+  <main class="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center px-4 py-8 md:py-12">
+    <div class="mx-auto w-full max-w-sm space-y-6">
       <div class="text-center">
         <p class="island-kicker mb-2">Welcome back</p>
         <h1 class="display-title text-3xl font-bold text-[var(--sea-ink)]">Sign in</h1>
@@ -18,7 +18,7 @@ if (next === '/') next = '/betfront/';
       </div>
       <AuthForm mode="login" next={next} client:load />
       <p class="text-center text-sm text-[var(--sea-ink-soft)]">
-        No account? <a href={`/betfront/signup?next=${encodeURIComponent(next)}`} class="text-[var(--lagoon-deep)] font-medium">Create one</a>
+        No account?        <a href={`/signup?next=${encodeURIComponent(next)}`} class="text-[var(--lagoon-deep)] font-medium">Create one</a>
       </p>
     </div>
   </main>

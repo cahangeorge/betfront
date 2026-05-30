@@ -27,7 +27,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
   const session = await createSession(user.id)
   cookies.set(SESSION_COOKIE, session.id, {
-    path: '/betfront',
+    path: '/',
     httpOnly: true,
     sameSite: 'lax',
     secure: import.meta.env.PROD,

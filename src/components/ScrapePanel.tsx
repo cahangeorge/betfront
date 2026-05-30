@@ -79,7 +79,7 @@ function FutureTab() {
           <Badge status="info" label="OddsHarvester" />
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--sea-ink-soft)]">
               Sport
@@ -117,7 +117,7 @@ function FutureTab() {
           </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button
             variant="primary"
             onClick={() => run.mutate()}
@@ -127,7 +127,7 @@ function FutureTab() {
             Run upcoming scrape
           </Button>
           <span className="text-xs text-[var(--sea-ink-soft)]">
-            For full historic + advanced filters, use the <a className="underline" href="/betfront/data">Data Hub</a>.
+            For full historic + advanced filters, use the <a className="underline" href="/data">Data Hub</a>.
           </span>
         </div>
       </Card>
@@ -187,7 +187,7 @@ function HistoryTab() {
           <Badge status="info" label="soccerdata" />
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--sea-ink-soft)]">
               Source
@@ -216,7 +216,7 @@ function HistoryTab() {
           </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button
             variant="primary"
             onClick={() => run.mutate()}

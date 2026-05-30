@@ -333,8 +333,8 @@ function RunDetail({ runId, onClose }: { runId: number; onClose: () => void }) {
       <div className="mb-3 text-sm text-[var(--sea-ink-soft)]">
         {summary(data.run)} • {byMatch.size} matches • {rows.length} predictions
       </div>
-      <div className="overflow-auto">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto -mx-3 sm:mx-0">
+        <table className="min-w-[640px] w-full text-sm sm:min-w-0">
           <thead className="text-left text-xs uppercase text-[var(--sea-ink-soft)]">
             <tr>
               <th className="py-2 pr-3">Match</th>

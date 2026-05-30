@@ -406,7 +406,7 @@ function ProcessPanel({
   if (processes.length === 0 && logs.length === 0) return null
 
   return (
-    <div className="sticky top-4 w-72 shrink-0 space-y-3">
+    <div className="lg:sticky lg:top-4 w-full lg:w-72 lg:shrink-0 space-y-3 order-first lg:order-last mb-4 lg:mb-0">
       {/* Active processes */}
       {processes.length > 0 && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm">
@@ -2215,10 +2215,10 @@ export function PredictionsPanel() {
   }, [leaguesKey, predictionPreparationMode])
 
   return (
-    <div className="flex items-start gap-6">
-    <div className="min-w-0 flex-1 space-y-6">
+    <div className="flex flex-col lg:flex-row items-start gap-4 lg:gap-6">
+    <div className="min-w-0 flex-1 space-y-4 sm:space-y-6">
       {/* Progress Stepper */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {[
           { n: 1, label: 'League', done: step1Done },
           { n: 2, label: 'History', done: step2Done },
@@ -2242,7 +2242,7 @@ export function PredictionsPanel() {
             </div>
             {i < arr.length - 1 && (
               <div
-                className={`h-0.5 flex-1 rounded ${
+                className={`hidden sm:block h-0.5 w-8 lg:flex-1 rounded ${
                   s.done ? 'bg-[var(--lagoon-deep)]' : 'bg-[var(--line)]'
                 }`}
               />
@@ -2429,7 +2429,7 @@ export function PredictionsPanel() {
 
         {/* DB count indicator for frontbet source */}
         {historySource === 'frontbet' && leagues.length > 0 && !hasAllLeagues && (
-          <div className="flex items-center gap-3 rounded-lg border border-[var(--line)] bg-[var(--sand)]/40 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--line)] bg-[var(--sand)]/40 px-3 py-2">
             <span className="text-xs font-medium text-[var(--sea-ink)]">
               DB: {historyDbCount != null ? (
                 <>
@@ -2594,7 +2594,7 @@ export function PredictionsPanel() {
               type="date"
               value={matchDateFrom}
               onChange={(e) => setMatchDateFrom(e.target.value)}
-              className="w-40 text-sm"
+              className="w-full sm:w-40 text-base"
             />
           </div>
           <div className="space-y-1">
@@ -2634,7 +2634,7 @@ export function PredictionsPanel() {
           </p>
         )}
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {matchesAutoReady ? (
             <>
               <span className="text-sm font-semibold text-[var(--lagoon-deep)]">
@@ -3129,7 +3129,7 @@ export function PredictionsPanel() {
           </div>
 
           {/* Save to Prediction History */}
-          <div className="flex items-center gap-3 border-t border-[var(--line)] pt-4">
+          <div className="flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-4">
             {isAutoSaving || saveHistoryMut.isPending ? (
               <span className="flex items-center gap-1.5 text-sm text-[var(--sea-ink-soft)]">
                 <Spinner className="h-4 w-4" /> Saving to history…
@@ -3538,8 +3538,8 @@ export function PredictionsPanel() {
               </div>
 
               {/* Value bets table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <table className="min-w-[720px] w-full text-sm sm:min-w-0">
                   <thead>
                     <tr className="border-b-2 border-[var(--line)] text-xs">
                       <th className="px-2 py-2 text-left font-semibold text-[var(--sea-ink-soft)]">✓</th>

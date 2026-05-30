@@ -8,6 +8,7 @@ COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+RUN DATABASE_URL="file:./dev.db" npx prisma generate
 RUN pnpm run build
 
 # ---- runtime ----
@@ -19,6 +20,8 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/src/generated/prisma ./src/generated/prisma
+COPY --from=build /app/dev.db ./dev.db
 
 ENV NODE_ENV=production
 ENV PORT=3001

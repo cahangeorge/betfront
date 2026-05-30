@@ -2,15 +2,15 @@
 import Layout from '#/layouts/Layout.astro';
 import { AuthForm } from '#/components/AuthForm';
 
-if (Astro.locals.user) return Astro.redirect('/betfront/');
+if (Astro.locals.user) return Astro.redirect('/');
 
-const next = new URL(Astro.request.url).searchParams.get('next') ?? '/betfront/';
-if (next === '/') next = '/betfront/';
+const next = new URL(Astro.request.url).searchParams.get('next') ?? '/';
+if (next === '/') next = '/';
 ---
 
 <Layout title="Betfront — Sign up">
-  <main class="page-wrap px-4 pb-12 pt-16">
-    <div class="mx-auto max-w-md space-y-6">
+  <main class="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center px-4 py-8 md:py-12">
+    <div class="mx-auto w-full max-w-sm space-y-6">
       <div class="text-center">
         <p class="island-kicker mb-2">Get started</p>
         <h1 class="display-title text-3xl font-bold text-[var(--sea-ink)]">Create your account</h1>

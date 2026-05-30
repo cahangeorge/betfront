@@ -7,9 +7,9 @@ export default function UserMenu({ user }: { user: { email: string; name: string
   async function logout() {
     setBusy(true)
     try {
-      await fetch('/betfront/api/auth/logout', { method: 'POST' })
+      await fetch('/api/auth/logout', { method: 'POST' })
     } finally {
-      window.location.href = '/betfront/login'
+      window.location.href = '/login'
     }
   }
 

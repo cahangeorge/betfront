@@ -579,15 +579,15 @@ function MatchBrowser({
   return (
     <div className="flex flex-col gap-3">
       {/* Filters */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Input
           placeholder="Search teams or league…"
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
-          className="flex-1"
+          className="flex-1 min-w-[12rem]"
         />
         {sportOptions.length > 2 && (
-          <div className="w-36">
+          <div className="w-36 min-w-[8rem]">
             <Select value={sport} onValueChange={setSport} options={sportOptions} />
           </div>
         )}
@@ -1086,7 +1086,7 @@ export function TicketsPanel() {
   return (
     <>
       <Tabs defaultValue="build">
-        <TabsList className="mb-6">
+        <TabsList className="mb-6 overflow-x-auto">
           <TabsTrigger value="build">✋ Manual Build</TabsTrigger>
           <TabsTrigger value="predict">🔮 Prediction Build</TabsTrigger>
           <TabsTrigger value="saved">📋 Saved Tickets</TabsTrigger>
@@ -1095,7 +1095,7 @@ export function TicketsPanel() {
         <TabsContent value="build">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
             {/* Left – match browser */}
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               <div>
                 <p className="island-kicker mb-1">Match Browser</p>
                 <p className="text-sm text-[var(--sea-ink-soft)]">

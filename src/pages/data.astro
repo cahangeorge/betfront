@@ -7,12 +7,14 @@ const params = Astro.url.searchParams;
 const today = new Date().toISOString().slice(0, 10);
 const tab = params.get('tab') ?? 'scrape';
 const dateFrom = params.get('dateFrom') ?? today;
-const dateTo = params.get('dateTo') ?? today;
+// Default to 7 days ahead so upcoming matches are visible on first load
+const dateToDefault = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const dateTo = params.get('dateTo') ?? dateToDefault;
 ---
 
 <Layout title="Betfront — Data">
-  <main class="page-wrap px-4 pb-12 pt-10">
-    <div class="mx-auto max-w-6xl space-y-8">
+  <main class="page-wrap px-3 sm:px-4 pb-12 pt-6 sm:pt-10">
+    <div class="mx-auto max-w-6xl space-y-6 sm:space-y-8">
       <div class="page-header">
         <p class="island-kicker mb-2">Data</p>
         <h1 class="display-title text-3xl font-bold text-[var(--sea-ink)]">
@@ -25,14 +27,14 @@ const dateTo = params.get('dateTo') ?? today;
       </div>
 
       <nav class="tab-bar -mx-4 px-4" aria-label="Data tabs">
-        <a
-          href="/betfront/data?tab=scrape"
-          class:list={['tab-pill', { 'is-active': tab === 'scrape' }]}>🕷 Scrape</a
-        >
-        <a
-          href="/betfront/data?tab=history"
-          class:list={['tab-pill', { 'is-active': tab === 'history' }]}>📊 History</a
-        >
+      <a
+        href="/data?tab=scrape"
+        class:list={['tab-pill', { 'is-active': tab === 'scrape' }]}>🕷 Scrape</a
+      >
+      <a
+        href="/data?tab=history"
+        class:list={['tab-pill', { 'is-active': tab === 'history' }]}>📊 History</a
+      >
       </nav>
 
       {tab === 'scrape' && <DataHubPanel client:load />}

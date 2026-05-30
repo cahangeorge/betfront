@@ -2,20 +2,20 @@
 import ThemeToggle from '#/components/ThemeToggle';
 import UserMenu from '#/components/UserMenu';
 
-const BETFRONT_BASE = '/betfront'
+const BASE_URL = ''
 
 const navLinks = [
-  { href: `${BETFRONT_BASE}/`, label: 'Home' },
-  { href: `${BETFRONT_BASE}/data`, label: 'Data' },
-  { href: `${BETFRONT_BASE}/predict`, label: 'Predict' },
-  { href: `${BETFRONT_BASE}/tickets`, label: 'Tickets' },
-  { href: `${BETFRONT_BASE}/jobs`, label: 'Jobs' },
-  { href: `${BETFRONT_BASE}/account`, label: 'Account' },
+  { href: `${BASE_URL}/`, label: 'Home' },
+  { href: `${BASE_URL}/data`, label: 'Data' },
+  { href: `${BASE_URL}/predict`, label: 'Predict' },
+  { href: `${BASE_URL}/tickets`, label: 'Tickets' },
+  { href: `${BASE_URL}/jobs`, label: 'Jobs' },
+  { href: `${BASE_URL}/account`, label: 'Account' },
 ];
 
 const path = Astro.url.pathname;
 const isActive = (href: string) =>
-  href === `${BETFRONT_BASE}/` ? path === `${BETFRONT_BASE}/` : path === href || path.startsWith(`${href}/`);
+  href === `${BASE_URL}/` ? path === `${BASE_URL}/` : path === href || path.startsWith(`${href}/`);
 
 const user = Astro.locals.user;
 ---
@@ -23,10 +23,10 @@ const user = Astro.locals.user;
 <header
   class="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] backdrop-blur-lg"
 >
-  <div class="page-wrap flex items-center h-14 px-4 gap-3">
+  <div class="page-wrap flex items-center h-14 px-4 gap-3 min-w-0 overflow-hidden">
     <!-- Brand -->
     <a
-      href={`${BETFRONT_BASE}/`}
+      href={`${BASE_URL}/`}
       class="flex-shrink-0 inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] no-underline shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] transition-shadow"
     >
       <span class="h-2 w-2 rounded-full bg-[linear-gradient(135deg,#56c6be,#7ed3bf)] flex-shrink-0"></span>

@@ -76,7 +76,7 @@ export function AccountPanel() {
     <div className="space-y-6">
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-lg font-bold text-[var(--sea-ink)]">👤 Account</h2>
             <p className="text-xs text-[var(--sea-ink-soft)]">
               Signed in as <span className="font-medium text-[var(--sea-ink)]">{userQ.data?.email}</span>
@@ -134,8 +134,8 @@ function BankrollSelector({
 }) {
   if (bankrolls.length === 0) return null
   return (
-    <div className="flex items-center gap-2">
-      <Label className="text-xs text-[var(--sea-ink-soft)]">Active bankroll</Label>
+    <div className="flex flex-wrap items-center gap-2">
+      <Label className="text-xs text-[var(--sea-ink-soft)] shrink-0">Active bankroll</Label>
       <Select
         value={value == null ? undefined : String(value)}
         onValueChange={(v) => onChange(Number(v))}
@@ -161,7 +161,7 @@ function SummaryCard({ summary }: { summary: Summary }) {
   const ticketTotal = Object.values(summary.ticketsByStatus).reduce((s, n) => s + n, 0)
   return (
     <Card>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Balance" value={fmt(bankroll.balance, bankroll.currency)} />
         <Stat
           label="P&L"
@@ -247,7 +247,7 @@ function BankrollDetails({
           {bankroll.type}
         </span>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-1">
           <Label>Name</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -263,7 +263,7 @@ function BankrollDetails({
             onChange={(e) => setKelly(e.target.value)}
           />
         </div>
-        <div className="flex items-end gap-2">
+        <div className="flex flex-wrap items-end gap-2">
           <Button
             onClick={() =>
               updateMut.mutate({
@@ -273,6 +273,7 @@ function BankrollDetails({
               })
             }
             disabled={updateMut.isPending}
+            className="flex-1 min-w-[6rem]"
           >
             {updateMut.isPending ? 'Saving…' : 'Save'}
           </Button>
@@ -282,6 +283,7 @@ function BankrollDetails({
               updateMut.mutate({ id: bankroll.id, isActive: !bankroll.isActive })
             }
             disabled={updateMut.isPending}
+            className="flex-1 min-w-[6rem]"
           >
             {bankroll.isActive ? 'Archive' : 'Activate'}
           </Button>
@@ -293,6 +295,7 @@ function BankrollDetails({
               }
             }}
             disabled={deleteMut.isPending}
+            className="flex-1 min-w-[6rem]"
           >
             Delete
           </Button>
@@ -345,7 +348,7 @@ function CreateBankrollCard({ onCreated }: { onCreated: () => void }) {
   return (
     <Card className="space-y-3">
       <h3 className="text-sm font-semibold text-[var(--sea-ink)]">New Bankroll</h3>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-1">
           <Label>Name</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Weekend Acca" />
@@ -502,7 +505,8 @@ function BookmakerAccountsCard({
           description="Add one to track per-book balances and place bets against them."
         />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="-mx-1 overflow-x-auto">
+          <div className="min-w-[560px] px-1">
           <table className="w-full text-xs">
             <thead className="bg-[var(--sand)]">
               <tr className="border-b border-[var(--line)]">
@@ -532,6 +536,7 @@ function BookmakerAccountsCard({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </Card>
@@ -703,7 +708,8 @@ function LedgerCard({
       ) : (listQ.data ?? []).length === 0 ? (
         <EmptyState title="No ledger entries yet" description="Deposits, stakes, wins/losses appear here." />
       ) : (
-        <div className="max-h-[420px] overflow-auto">
+        <div className="max-h-[420px] overflow-auto -mx-1">
+          <div className="min-w-[640px] px-1">
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-[var(--sand)]">
               <tr className="border-b border-[var(--line)]">
@@ -742,6 +748,7 @@ function LedgerCard({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </Card>

@@ -86,14 +86,14 @@ function GenerateTab() {
   return (
     <Card>
       <div className="mb-3 text-base font-semibold">Generate ticket batch</div>
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <Badge status="info" label={strategy} />
         <span className="text-xs text-[var(--sea-ink-soft)]">
           Pulls leg candidates from successful PredictionRuns + cross-references current OddsEntry rows.
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--sea-ink-soft)]">Bankroll</label>
           <Select value={effectiveBankrollId || '__none__'} onValueChange={(v) => setBankrollId(v === '__none__' ? '' : v)} options={bankrollOptions} />
@@ -263,9 +263,9 @@ function BatchDetail({ batchId, onClose }: { batchId: number; onClose: () => voi
 
   return (
     <Card>
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <div className="text-base font-semibold">{data.name ?? `Batch #${data.id}`}</div>
+      <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-base font-semibold truncate">{data.name ?? `Batch #${data.id}`}</div>
           <div className="text-xs text-[var(--sea-ink-soft)]">
             {data.strategy} • {data.ticketCount} tickets • {data.bankroll?.name}
           </div>
@@ -277,8 +277,8 @@ function BatchDetail({ batchId, onClose }: { batchId: number; onClose: () => voi
           const placement = t.placements?.[0]
           return (
             <div key={t.id} className="rounded-lg border border-[var(--sea-line)] p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge status={t.status === 'settled' ? 'success' : t.status === 'placed' ? 'info' : 'neutral'} label={t.status} />
                   <span className="font-mono text-sm">#{t.id}</span>
                   <span className="text-sm">odds {t.combinedOdds.toFixed(2)} • prob {(t.combinedProbability * 100).toFixed(1)}% • EV {(t.expectedValue * 100).toFixed(1)}%</span>
@@ -287,12 +287,12 @@ function BatchDetail({ batchId, onClose }: { batchId: number; onClose: () => voi
               </div>
               <div className="mb-2 space-y-1 text-xs">
                 {t.legs.map((leg: any) => (
-                  <div key={leg.id} className="flex items-center justify-between border-b border-[var(--sea-line)]/50 py-1">
-                    <span>
+                  <div key={leg.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-[var(--sea-line)]/50 py-1 gap-0.5">
+                    <span className="truncate">
                       {leg.homeTeam} vs {leg.awayTeam}
                       <span className="ml-2 text-[var(--sea-ink-soft)]">{leg.matchDate ?? ''}</span>
                     </span>
-                    <span className="font-mono">
+                    <span className="font-mono shrink-0">
                       {leg.label} @ {leg.odds.toFixed(2)} ({leg.bookmaker}) • p={leg.modelProb != null ? (leg.modelProb * 100).toFixed(0) + '%' : '—'}
                     </span>
                   </div>
@@ -341,8 +341,8 @@ function BatchesTab() {
               const settled = b.tickets.filter((t: any) => t.status === 'settled').length
               const placed = b.tickets.filter((t: any) => t.status === 'placed').length
               return (
-                <div key={b.id} className="flex items-center justify-between rounded-lg border border-[var(--sea-line)] bg-[var(--sea-surface)] px-3 py-2">
-                  <div className="flex-1">
+                <div key={b.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-[var(--sea-line)] bg-[var(--sea-surface)] px-3 py-2">
+                  <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold">
                       #{b.id} • {b.strategy} • {b.bankroll?.name ?? '—'}
                     </div>
@@ -433,8 +433,9 @@ function ArbitragePlaceModal({
           <Input value={totalStake} onChange={(e) => setTotalStake(e.target.value)} type="number" />
         </div>
       </div>
-      <div className="mt-3 space-y-2">
-        {opp.legs.map((leg: any) => {
+      <div className="mt-3 -mx-1 overflow-x-auto">
+        <div className="min-w-[560px] space-y-2 px-1">
+          {opp.legs.map((leg: any) => {
           const projectedStake = (Number(totalStake) * leg.impliedProb) / opp.totalImplied
           const accountId = legAccounts[leg.outcome] ?? (bankrollAccounts[0]?.id ? String(bankrollAccounts[0].id) : '__none__')
           return (
@@ -453,8 +454,9 @@ function ArbitragePlaceModal({
             </div>
           )
         })}
+        </div>
       </div>
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <Button variant="primary" onClick={() => place.mutate()} disabled={place.isPending || !bankrollId || !bankrollAccounts.length}>
           {place.isPending ? 'Placing…' : 'Place hedge tickets'}
         </Button>
@@ -495,7 +497,7 @@ function ArbitrageTab() {
           Scans current OddsEntry rows. Finds matches where best odds across bookmakers sum (1/odds) to less than 1.
           Hedge stakes are split so payout is identical regardless of outcome.
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--sea-ink-soft)]">Window (days)</label>
             <Input value={windowDays} onChange={(e) => setWindowDays(e.target.value)} type="number" />

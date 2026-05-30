@@ -15,7 +15,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
     setLoading(true)
     setError(null)
     try {
-      const url = mode === 'login' ? '/betfront/api/auth/login' : '/betfront/api/auth/signup'
+      const url = mode === 'login' ? '/api/auth/login' : '/api/auth/signup'
       const body =
         mode === 'login'
           ? { email, password }
@@ -29,7 +29,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
       if (!res.ok) {
         throw new Error((data as any)?.error ?? `Request failed (${res.status})`)
       }
-      window.location.href = (next || '/').replace(/^\/(?!betfront)/, '/betfront/')
+      window.location.href = (next || '/')
     } catch (err: any) {
       setError(String(err?.message ?? err))
       setLoading(false)
@@ -41,7 +41,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
       <form onSubmit={submit} className="space-y-4">
         {mode === 'signup' && (
           <div>
-            <label className="text-xs font-medium text-[var(--sea-ink-soft)]">Name (optional)</label>
+            <label className="mb-1 block text-sm font-semibold text-[var(--sea-ink-soft)]">Name (optional)</label>
             <Input
               type="text"
               value={name}
@@ -51,7 +51,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
           </div>
         )}
         <div>
-          <label className="text-xs font-medium text-[var(--sea-ink-soft)]">Email</label>
+          <label className="mb-1 block text-sm font-semibold text-[var(--sea-ink-soft)]">Email</label>
           <Input
             type="email"
             value={email}
@@ -62,7 +62,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-[var(--sea-ink-soft)]">Password</label>
+          <label className="mb-1 block text-sm font-semibold text-[var(--sea-ink-soft)]">Password</label>
           <Input
             type="password"
             value={password}

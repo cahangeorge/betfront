@@ -409,7 +409,7 @@ export function MatchesTable({
     <div className="space-y-3">
       {/* Selection action bar */}
       {someSelected && (
-        <div className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/8 px-4 py-2 text-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/8 px-3 sm:px-4 py-2 text-sm">
           <span className="font-medium text-[var(--sea-ink)]">{selectedMatchIds.size} match{selectedMatchIds.size !== 1 ? 'es' : ''} selected</span>
           <button
             type="button"
@@ -523,7 +523,7 @@ export function MatchesTable({
       )}
 
       {/* Search + count row */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Input
           value={teamFilter}
           onChange={(e) => setTeamFilter(e.target.value)}
@@ -542,7 +542,8 @@ export function MatchesTable({
           No matches scraped yet.
         </Card>
       ) : (
-        <Card className="overflow-x-auto p-0">
+      <div className="overflow-x-auto -mx-3 sm:mx-0">
+        <Card className="min-w-[700px] overflow-hidden p-0 sm:min-w-0">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--line)] bg-[var(--sand)]/50">
@@ -707,6 +708,7 @@ export function MatchesTable({
             </tbody>
           </table>
         </Card>
+      </div>
       )}
     </div>
   )

@@ -244,8 +244,8 @@ function DatasetDetail({
           </a>
         </div>
       )}
-      <div className="max-h-[400px] overflow-auto rounded-lg border border-[var(--line)] bg-[var(--sand)]">
-        <table className="w-full text-xs">
+      <div className="max-h-[400px] overflow-y-auto overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--sand)]">
+        <table className="min-w-[640px] w-full text-xs sm:min-w-0">
           <thead className="sticky top-0 bg-[var(--sand)] z-10">
             <tr className="border-b border-[var(--line)]">
               {columns.map((col) => (

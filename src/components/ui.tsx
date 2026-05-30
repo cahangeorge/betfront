@@ -103,7 +103,7 @@ export function Button({
       {...props}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center font-semibold transition-[color,background-color,border-color,box-shadow,opacity,transform]',
+        'inline-flex items-center font-semibold transition-[color,background-color,border-color,box-shadow,opacity,transform] min-h-11',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lagoon)]',
         'disabled:pointer-events-none disabled:opacity-50',
         buttonVariants[variant],
@@ -124,7 +124,7 @@ export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInp
     <input
       {...props}
       className={cn(
-        'w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--sea-ink)]',
+        'w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-base text-[var(--sea-ink)] min-h-11',
         'placeholder:text-[var(--sea-ink-soft)]/50',
         'focus:outline-none focus:ring-2 focus:ring-[var(--lagoon)] focus:border-transparent',
         'disabled:opacity-50',
@@ -140,7 +140,7 @@ export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLab
   return (
     <label
       {...props}
-      className={cn('text-xs font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]', className)}
+      className={cn('text-xs sm:text-sm font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]', className)}
     />
   )
 }
@@ -158,7 +158,7 @@ export function Card({
     <div
       {...props}
       className={cn(
-        'rounded-2xl border border-[var(--line)] p-5 backdrop-blur-sm',
+        'rounded-2xl border border-[var(--line)] p-3 sm:p-4 backdrop-blur-sm overflow-hidden',
         variant === 'default' && 'bg-[var(--surface)]',
         variant === 'interactive' &&
           'bg-[var(--surface)] cursor-pointer transition-[transform,box-shadow] hover:-translate-y-1 hover:shadow-[var(--shadow-glow-lagoon)]',
@@ -198,7 +198,7 @@ export function Select({
       <SelectNS.Trigger
         className={cn(
           'flex w-full items-center justify-between rounded-lg border border-[var(--line)]',
-          'bg-[var(--surface)] px-3 py-2 text-sm text-[var(--sea-ink)]',
+          'bg-[var(--surface)] px-3 py-2 text-sm text-[var(--sea-ink)] min-h-11',
           'focus:outline-none focus:ring-2 focus:ring-[var(--lagoon)]',
           'data-[placeholder]:text-[var(--sea-ink-soft)]/50',
           'disabled:opacity-50',
@@ -610,7 +610,7 @@ export function DialogContent({
         {...props}
         className={cn(
           'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2',
-          'rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-6 shadow-xl',
+          'rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-6 shadow-xl overflow-hidden',
           'data-[state=open]:animate-in data-[state=closed]:animate-out',
           'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
           'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',

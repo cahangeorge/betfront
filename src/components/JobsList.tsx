@@ -206,7 +206,7 @@ export function JobsList({ source }: { source?: string } = {}) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -244,7 +244,7 @@ export function JobsList({ source }: { source?: string } = {}) {
         const isSelected = selected.has(job.id)
         return (
           <Card key={job.id} className={`py-3 transition-colors ${isSelected ? 'ring-1 ring-[var(--lagoon-deep)]/40' : ''}`}>
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-3">
               <div className="pt-0.5 shrink-0">
                 {!isRunning && (
                   <input

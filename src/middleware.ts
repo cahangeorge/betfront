@@ -4,17 +4,16 @@ import { requestContext } from '#/server/auth/context'
 
 // Routes that don't require auth
 const PUBLIC_PATHS = new Set([
-  '/betfront/login',
-  '/betfront/signup',
-  '/betfront/api/auth/login',
-  '/betfront/api/auth/signup',
-  '/betfront/api/auth/logout',
+  '/login',
+  '/signup',
+  '/api/auth/login',
+  '/api/auth/signup',
+  '/api/auth/logout',
 ])
 
 function isPublic(pathname: string) {
   if (PUBLIC_PATHS.has(pathname)) return true
   if (pathname.startsWith('/_') || pathname.startsWith('/favicon') || pathname === '/manifest.json') return true
-  if (pathname.startsWith('/betfront/_') || pathname.startsWith('/betfront/favicon') || pathname === '/betfront/manifest.json') return true
   // static assets
   if (/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|map)$/.test(pathname)) return true
   return false
@@ -32,7 +31,7 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   // Auth gate (HTML pages only — API routes handle their own 401)
   const url = new URL(ctx.request.url)
   if (!session && !isPublic(url.pathname) && ctx.request.method === 'GET') {
-    return ctx.redirect(`/betfront/login?next=${encodeURIComponent(url.pathname + url.search)}`)
+    return ctx.redirect(`/login?next=${encodeURIComponent(url.pathname + url.search)}`)
   }
 
   // Inject context into AsyncLocalStorage for server actions

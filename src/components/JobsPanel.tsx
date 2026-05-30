@@ -123,7 +123,7 @@ export function JobsPanel() {
         {statusQ.isLoading ? (
           <div className="text-sm text-[var(--sea-ink-soft)]">Loading…</div>
         ) : status ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 text-sm">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
             <div>
               <div className="text-xs uppercase text-[var(--sea-ink-soft)]">State</div>
               <div className="mt-1">
@@ -166,81 +166,83 @@ export function JobsPanel() {
                 description="Create a recurring scrape, prediction, or arbitrage scan from the New job tab."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs uppercase text-[var(--sea-ink-soft)]">
-                      <th className="py-2 pr-3">Name</th>
-                      <th className="py-2 pr-3">Kind</th>
-                      <th className="py-2 pr-3">Cron</th>
-                      <th className="py-2 pr-3">Status</th>
-                      <th className="py-2 pr-3">Last run</th>
-                      <th className="py-2 pr-3">Runs</th>
-                      <th className="py-2 pr-3">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {jobs.map((j) => (
-                      <tr key={j.id} className="border-t border-[var(--line)] align-top">
-                        <td className="py-2 pr-3 font-medium">{j.name}</td>
-                        <td className="py-2 pr-3">
-                          <code className="text-xs">{j.kind}</code>
-                        </td>
-                        <td className="py-2 pr-3">
-                          <code className="text-xs">{j.cron}</code>
-                        </td>
-                        <td className="py-2 pr-3 space-y-1">
+            <div className="-mx-1 overflow-x-auto">
+              <div className="min-w-[720px] px-1">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase text-[var(--sea-ink-soft)]">
+                    <th className="py-2 pr-3">Name</th>
+                    <th className="py-2 pr-3">Kind</th>
+                    <th className="py-2 pr-3">Cron</th>
+                    <th className="py-2 pr-3">Status</th>
+                    <th className="py-2 pr-3">Last run</th>
+                    <th className="py-2 pr-3">Runs</th>
+                    <th className="py-2 pr-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {jobs.map((j) => (
+                    <tr key={j.id} className="border-t border-[var(--line)] align-top">
+                      <td className="py-2 pr-3 font-medium">{j.name}</td>
+                      <td className="py-2 pr-3">
+                        <code className="text-xs">{j.kind}</code>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <code className="text-xs">{j.cron}</code>
+                      </td>
+                      <td className="py-2 pr-3 space-y-1">
+                        <div>
+                          <Badge status={j.isEnabled ? 'success' : 'pending'} label={j.isEnabled ? 'enabled' : 'paused'} />
+                        </div>
+                        {j.lastStatus && (
                           <div>
-                            <Badge status={j.isEnabled ? 'success' : 'pending'} label={j.isEnabled ? 'enabled' : 'paused'} />
+                            <Badge status={j.lastStatus === 'success' ? 'success' : j.lastStatus === 'failed' ? 'failed' : 'running'} label={j.lastStatus} />
                           </div>
-                          {j.lastStatus && (
-                            <div>
-                              <Badge status={j.lastStatus === 'success' ? 'success' : j.lastStatus === 'failed' ? 'failed' : 'running'} label={j.lastStatus} />
-                            </div>
-                          )}
-                          {j.lastError && (
-                            <div className="text-xs text-red-600 max-w-[240px] truncate" title={j.lastError}>
-                              {j.lastError}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-2 pr-3 text-xs text-[var(--sea-ink-soft)]">{formatDate(j.lastRunAt)}</td>
-                        <td className="py-2 pr-3">{j.runCount}</td>
-                        <td className="py-2 pr-3">
-                          <div className="flex flex-wrap gap-1">
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              onClick={() => runMut.mutate(j.id)}
-                              disabled={runMut.isPending}
-                            >
-                              Run now
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => toggleMut.mutate({ id: j.id, isEnabled: !j.isEnabled })}
-                              disabled={toggleMut.isPending}
-                            >
-                              {j.isEnabled ? 'Pause' : 'Enable'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="danger"
-                              onClick={() => {
-                                if (confirm(`Delete job "${j.name}"?`)) deleteMut.mutate(j.id)
-                              }}
-                              disabled={deleteMut.isPending}
-                            >
-                              Delete
-                            </Button>
+                        )}
+                        {j.lastError && (
+                          <div className="text-xs text-red-600 max-w-[240px] truncate" title={j.lastError}>
+                            {j.lastError}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        )}
+                      </td>
+                      <td className="py-2 pr-3 text-xs text-[var(--sea-ink-soft)]">{formatDate(j.lastRunAt)}</td>
+                      <td className="py-2 pr-3">{j.runCount}</td>
+                      <td className="py-2 pr-3">
+                        <div className="flex flex-wrap gap-1">
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={() => runMut.mutate(j.id)}
+                            disabled={runMut.isPending}
+                          >
+                            Run now
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => toggleMut.mutate({ id: j.id, isEnabled: !j.isEnabled })}
+                            disabled={toggleMut.isPending}
+                          >
+                            {j.isEnabled ? 'Pause' : 'Enable'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => {
+                              if (confirm(`Delete job "${j.name}"?`)) deleteMut.mutate(j.id)
+                            }}
+                            disabled={deleteMut.isPending}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
               </div>
+            </div>
             )}
           </Card>
         </TabsContent>
