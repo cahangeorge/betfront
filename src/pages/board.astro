@@ -1,0 +1,22 @@
+---
+import Layout from '#/layouts/Layout.astro';
+import { Ticker } from '#/components/Ticker';
+---
+
+<Layout title="Betfront — Live Board">
+  <main class="page-wrap px-4 pb-12 pt-10">
+    <div class="mx-auto max-w-6xl space-y-6 sm:space-y-8">
+      <div class="page-header">
+        <p class="island-kicker mb-2">Live Odds</p>
+        <h1 class="display-title text-3xl font-bold text-[var(--sea-ink)]">
+          Betting Board
+        </h1>
+        <p class="mt-2 max-w-3xl text-[var(--sea-ink-soft)] leading-relaxed">
+          Real-time odds ticker for upcoming fixtures across top leagues. Click any odds to add selections to your ticket.
+        </p>
+      </div>
+
+      <Ticker client:load />
+    </div>
+  </main>
+</Layout>

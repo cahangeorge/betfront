@@ -9,6 +9,7 @@ const PUBLIC_PATHS = new Set([
   '/api/auth/login',
   '/api/auth/signup',
   '/api/auth/logout',
+  '/board',
 ])
 
 function isPublic(pathname: string) {

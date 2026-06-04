@@ -13,15 +13,17 @@ RUN pnpm run build
 
 # ---- runtime ----
 FROM node:22-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates     && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates python3 make gcc g++     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/pnpm-lock.yaml* ./
+COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/src/generated/prisma ./src/generated/prisma
 COPY --from=build /app/dev.db ./dev.db
+
+RUN corepack enable && corepack prepare pnpm@9 --activate     && pnpm install --frozen-lockfile --prod     && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 ENV PORT=3001
