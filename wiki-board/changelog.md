@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-06-05 — Auth Fixes + Backend Extensions + New Pages
+### Fixed
+- **Frontend API client** — Changed from FormData to /auth/* to JSON body to /api/v1/auth/* endpoints
+- **Backend deps.py** — Accepts both Bearer header and httpOnly cookies for JWT verification
+- **CORS configuration** — Expanded to include port 5174 for frontend dev server
+
+### Added
+- **MatchStat 8 new fields** — yellow_cards_home, yellow_cards_away, red_cards_home, red_cards_away, fouls_home, fouls_away, offsides_home, offsides_away
+- **Strategy model** — name, model_type (str), parameters (JSON), weights (JSON), is_active (bool)
+- **4 new API modules**: dashboard.py (4 endpoints), analytics.py (4 endpoints), catalog.py (3 endpoints), strategies.py (6 endpoints)
+- **4 new schema modules** for dashboard, analytics, catalog, strategies
+- **Alembic migration 002** — MatchStat extension + Strategy model
+- **Dashboard page** — 4 sections: Recent Tickets, Upcoming Matches, Account P&L chart (layerchart EquityCurveChart), Job Logs
+- **Data Hub page** — Unified table (3 tabs), search, date filter, pagination, CSV export, detail dialog
+- **Scraping page** — Country/league multi-select from catalog API, time period selectors, auto-scrape toggle, job table
+- **Predictions page** — Strategy card grid, market checkboxes, run with progress, results per strategy, CSV export
+
+## 2026-06-04 — UI Overhaul COMPLETE
+### Completed
+- **All 66 tasks across 6 phases completed** with verification loops after each phase
+- **Phase 1 (Foundation):** shadcn-svelte installed, 13 component directories (60+ files), HSL token system, football accent colors
+- **Phase 2 (Migration):** 7 UI primitives replaced, 18 domain components migrated, 156 legacy CSS references cleaned from 11 route pages
+- **Phase 3 (Charts):** layerchart 1.0.13 installed, 7 chart components created (OddsMovement, EquityCurve, PnLByLeague, WinRateByModel, EdgeDistribution, xGTimeline, OddsComparison)
+- **Phase 4 (Layout):** Three-column desktop + bottom nav mobile + betslip FAB, responsive CSS grid
+- **Phase 5 (Theme Toggle):** ThemeToggle with Sun/Moon, localStorage persistence, system preference detection, flash prevention
+- **Phase 6 (Polish):** Page transitions, card hover effects, loading skeletons, PWA meta tags, skip-to-content, ARIA labels, focus indicators, reduced motion, landmark roles
+- **Container rebuilt:** All 4 services verified (Frontend 200, Backend 200, PostgreSQL accepting, Redis PONG)
+
+## 2026-06-04 — UI Overhaul Plan (shadcn-svelte + layerchart)
+### Added
+- **UI overhaul plan** (`ui-overhaul-plan.md`): 6-phase plan to replace Stadium Intel theme with shadcn-svelte + layerchart + PWA-first design
+- **UI overhaul tasks** (`ui-overhaul-tasks.md`): 40 detailed tasks across 6 phases
+- **UI overhaul research** (`ui-overhaul-research.md`): Library references (shadcn-svelte, layerchart), football color reference (FIFA WC 2026, Euro 2024), Tailwind v4 setup
+- **Key decisions**: Fully replace Stadium Intel, rounded corners, three-column desktop + bottom sheet mobile, phone-first PWA, glassmorphism/transparency
+- **Estimated effort**: 16–22 hours
+
 ## 2026-06-04 — HELIOS Futuristic Theme Applied
 ### Added
 - **HELIOS design system**: Void black (#06080C) base, neon cyan/violet accents, glassmorphism cards, glow effects, 6 custom animations, custom scrollbar

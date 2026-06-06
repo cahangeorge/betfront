@@ -56,6 +56,29 @@ Build a production-grade, entry-only betting execution platform with live and pr
 | Orbit | No public API | — | — | Not available |
 | Betdaq | No free tier | — | Lower | Not available |
 
+## UI Overhaul (In Progress)
+
+**Status:** PLANNED — See [ui-overhaul-plan.md](ui-overhaul-plan.md), [ui-overhaul-tasks.md](ui-overhaul-tasks.md), [ui-overhaul-research.md](ui-overhaul-research.md)
+
+Replacing Stadium Intel theme with shadcn-svelte + layerchart + PWA-first design.
+
+### Key Decisions
+1. Fully replace Stadium Intel — no legacy tokens
+2. Rounded corners everywhere
+3. Three-column desktop + bottom sheet mobile
+4. Phone-first PWA
+5. Glassmorphism/transparency
+
+### 6 Phases
+1. **Foundation** — shadcn-svelte install, new color system, Tailwind v4
+2. **Component Migration** — Replace all custom components with shadcn
+3. **Charts (layerchart)** — Area, Bar, Line, Pie, Sparkline
+4. **Layout Overhaul** — Phone-first responsive, bottom nav, betslip FAB
+5. **Light/Dark Toggle** — System preference + manual override
+6. **Polish** — Animations, PWA, accessibility
+
+### Estimated: 16–22 hours
+
 ## Long-Term Vision
 A single platform where a user can:
 1. See live odds from multiple exchanges (Betfair, Matchbook, Smarkets)

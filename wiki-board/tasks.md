@@ -1,5 +1,33 @@
 # Active Tasks
 
+## UI Overhaul (Complete)
+- [x] **UI-001**: shadcn-svelte foundation — HSL token system, cn() utility, bits-ui, clsx, tailwind-merge, CVA
+- [x] **UI-002**: 13 shadcn component directories — button, card, input, select, tabs, badge, table, tooltip, dialog, sheet, separator, dropdown-menu, skeleton
+- [x] **UI-003**: 7 layerchart components — OddsMovementChart, EquityCurveChart, PnLByLeagueChart, WinRateByModelChart, EdgeDistributionChart, xGTimelineChart, OddsComparisonChart
+- [x] **UI-004**: Three-column layout — 220px sidebar + flex main + 320px betslip; mobile: BottomNav (5 tabs) + BetslipFAB
+- [x] **UI-005**: Light/Dark theme toggle — localStorage persistence + flash prevention + system preference detection
+- [x] **UI-006**: Micro-interactions — transition:fade on 5 pages, MatchCardSkeleton loading states
+- [x] **UI-007**: PWA optimized — manifest, apple-mobile-web-app-capable, service worker
+- [x] **UI-008**: Accessibility — skip-to-content, ARIA labels, focus-visible, prefers-reduced-motion, landmark roles
+
+## Auth Fixes (Complete)
+- [x] **AUTH-001**: Frontend API client sends JSON to /api/v1/auth/* (was FormData to /auth/*)
+- [x] **AUTH-002**: Backend deps.py accepts both Bearer header and httpOnly cookies
+- [x] **AUTH-003**: CORS expanded to include port 5174
+
+## Backend Extensions (Complete)
+- [x] **BE-001**: MatchStat 8 new fields — yellow/red cards, fouls, offsides home/away
+- [x] **BE-002**: Strategy model — name, model_type, parameters JSON, weights JSON, is_active
+- [x] **BE-003**: 4 new API modules — dashboard.py (4 endpoints), analytics.py (4 endpoints), catalog.py (3 endpoints), strategies.py (6 endpoints)
+- [x] **BE-004**: 4 new schema modules — dashboard, analytics, catalog, strategies
+- [x] **BE-005**: Alembic migration 002
+
+## Frontend Pages (Complete)
+- [x] **FE-001**: Dashboard — 4 sections (Recent Tickets, Upcoming Matches, Account P&L chart, Job Logs)
+- [x] **FE-002**: Data Hub — Unified table (3 tabs), search, date filter, pagination, CSV export, detail dialog
+- [x] **FE-003**: Scraping — Country/league multi-select, time period selectors, auto-scrape toggle, job table
+- [x] **FE-004**: Predictions — Strategy card grid, market checkboxes, run with progress, results per strategy, CSV export
+
 ## Sprint 13 — Data Expansion (Complete)
 - [x] **SP-13-1**: Bulk fetch historical matches from football-data.org
   - 5,256 matches across 5 leagues / 3 seasons
@@ -95,3 +123,7 @@
 - [x] Add `/board` to public paths in middleware
 - [x] All 13 sprints implemented and committed
 - [x] GitHub repo created: https://github.com/cahangeorge/betting-platform
+- [x] UI overhaul phases 1-6 complete (shadcn-svelte, layerchart, layout, theme, polish)
+- [x] Auth fixes (JSON body, dual auth, CORS)
+- [x] Backend extensions (MatchStat, Strategy, 4 API modules, migration 002)
+- [x] Frontend pages (Dashboard, Data Hub, Scraping, Predictions)

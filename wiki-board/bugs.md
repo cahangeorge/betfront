@@ -67,46 +67,72 @@
     - Fix: Always use out-of-sample mode (80/20 split) for realistic results
     - Location: `training/backtest.py`
 
+## Auth (Fixed 2026-06-05)
+12. **Frontend API client sends FormData to wrong auth endpoints**
+    - Status: **Fixed**
+    - Symptom: Login/signup returns 422 Unprocessable Entity from FastAPI
+    - Fix: Frontend API client now sends JSON body to `/api/v1/auth/*` (was FormData to `/auth/*`)
+    - Location: `frontend/src/lib/api.ts`
+
+13. **Backend rejects Bearer token from Swagger UI**
+    - Status: **Fixed**
+    - Symptom: Swagger UI "Authorize" button ineffective; always returns 401
+    - Fix: `deps.py` `get_current_user()` now accepts both `Authorization: Bearer <token>` header and httpOnly cookie (`access_token`)
+    - Location: `backend/core/deps.py`
+
+14. **CORS blocks frontend dev server requests**
+    - Status: **Fixed**
+    - Symptom: Browser console shows CORS error for requests from `http://localhost:5174`
+    - Fix: Added `http://localhost:5174` to CORS allowed origins
+    - Location: `backend/core/config.py`
+
 ## Low
-12. **No WebSocket push for live odds**
+15. **No WebSocket push for live odds**
     - Status: **Acknowledged**
     - Impact: Dashboard uses 5s polling instead of real-time push
     - Fix: Add Socket.IO or native WebSocket gateway in FastAPI
 
-13. **No lint/format scripts defined**
+16. **No lint/format scripts defined**
     - Status: **Acknowledged**
     - Impact: Code style enforcement missing for betfront
     - Fix: Add `ruff` to backend, `eslint + prettier` to frontend
 
-14. **No CI workflow for betfront**
+17. **No CI workflow for betfront**
     - Status: **Acknowledged**
     - Impact: No automated test/build on PRs for the frontend
     - Fix: Add `.github/workflows/betfront.yml`
 
 ## Data / Scrapers
-15. **football-data.org free tier limited to 10 calls/minute**
+18. **football-data.org free tier limited to 10 calls/minute**
     - Status: **Expected behavior**
     - Impact: Rate limiting on bulk data expansion
     - Fix: Add exponential backoff; upgrade to paid tier ($19/mo) for production
 
-16. **Understat scraper fragile on HTML changes**
+19. **Understat scraper fragile on HTML changes**
     - Status: **Expected behavior**
     - Policy: Fix selectors when upstream changes; do not skip tests
     - Location: `stats/understat_feed.py`
 
-17. **Cython models in penaltyblog require rebuild after edits**
+20. **Cython models in penaltyblog require rebuild after edits**
     - Status: **Expected behavior**
     - Reminder: Run `pip install -e .` after modifying `.pyx` files
 
-## Frontend
-18. **Match detail page fetches ALL matches to find one by ID**
+## Frontend (Fixed in Previous Sprints)
+21. **Match detail page fetches ALL matches to find one by ID**
     - Status: **Fixed** (commit 8e977fd)
     - Fix: Uses `api.getMatch(id)` directly instead of filtering full list
 
-19. **Prediction called before match loaded (hardcoded Arsenal/Chelsea)**
+22. **Prediction called before match loaded (hardcoded Arsenal/Chelsea)**
     - Status: **Fixed** (commit 8e977fd)
     - Fix: Prediction now called AFTER match is loaded with actual teams
 
-20. **Raw JSON `<pre>` dumps in models/backtest pages**
+23. **Raw JSON `<pre>` dumps in models/backtest pages**
     - Status: **Fixed** (commit 28caff7)
     - Fix: Structured result cards with key metrics instead of raw JSON dumps
+
+## New Known Issues
+24. **`is_admin=false` on seeded user**
+    - Status: **Acknowledged**
+    - Impact: Admin-only endpoints (strategies management, catalog) may fail for seeded user
+    - Fix: Set `is_admin=true` in seed script for `admin@betfront.com`
+    - Location: `scripts/seed.sh`
