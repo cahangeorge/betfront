@@ -135,6 +135,7 @@ async function main() {
           source: 'FBref',
           command: 'schedule',
           sport: 'football',
+          markets: 'schedule',
           league: slug,
           season: mapping.season,
           status: 'success',

@@ -8,22 +8,22 @@ import { prisma } from '#/db'
 export async function computeBrierScores(runId: number) {
   const ensembles = await prisma.ensemblePrediction.findMany({
     where: { runId },
-    include: { Match: { select: { homeScore: true, awayScore: true } } },
+    include: { match: { select: { homeScore: true, awayScore: true } } },
   })
 
   const byMarket: Record<string, number[]> = {}
 
   for (const ep of ensembles) {
-    if (ep.Match.homeScore == null || ep.Match.awayScore == null) continue
+    if (ep.match.homeScore == null || ep.match.awayScore == null) continue
 
     const actualOutcome =
-      ep.outcome === 'home' ? (ep.Match.homeScore > ep.Match.awayScore ? 1 : 0) :
-      ep.outcome === 'away' ? (ep.Match.awayScore > ep.Match.homeScore ? 1 : 0) :
-      ep.outcome === 'draw' ? (ep.Match.homeScore === ep.Match.awayScore ? 1 : 0) :
-      ep.outcome === 'over' ? ((ep.Match.homeScore + ep.Match.awayScore) > 2.5 ? 1 : 0) :
-      ep.outcome === 'under' ? ((ep.Match.homeScore + ep.Match.awayScore) <= 2.5 ? 1 : 0) :
-      ep.outcome === 'yes' ? (ep.Match.homeScore > 0 && ep.Match.awayScore > 0 ? 1 : 0) :
-      ep.outcome === 'no' ? (ep.Match.homeScore === 0 || ep.Match.awayScore === 0 ? 1 : 0) :
+      ep.outcome === 'home' ? (ep.match.homeScore > ep.match.awayScore ? 1 : 0) :
+      ep.outcome === 'away' ? (ep.match.awayScore > ep.match.homeScore ? 1 : 0) :
+      ep.outcome === 'draw' ? (ep.match.homeScore === ep.match.awayScore ? 1 : 0) :
+      ep.outcome === 'over' ? ((ep.match.homeScore + ep.match.awayScore) > 2.5 ? 1 : 0) :
+      ep.outcome === 'under' ? ((ep.match.homeScore + ep.match.awayScore) <= 2.5 ? 1 : 0) :
+      ep.outcome === 'yes' ? (ep.match.homeScore > 0 && ep.match.awayScore > 0 ? 1 : 0) :
+      ep.outcome === 'no' ? (ep.match.homeScore === 0 || ep.match.awayScore === 0 ? 1 : 0) :
       null
 
     if (actualOutcome == null) continue
@@ -85,19 +85,21 @@ export async function getModelAccuracy(modelKey: string, days = 30) {
     where: {
       modelKey,
       createdAt: { gte: since },
-      Match: { homeScore: { not: null }, awayScore: { not: null } },
+      match: { homeScore: { not: null }, awayScore: { not: null } },
     },
-    include: { Match: { select: { homeScore: true, awayScore: true } } },
+    include: { match: { select: { homeScore: true, awayScore: true } } },
   })
 
   if (Prediction.length === 0) return { total: 0, hits: 0, rate: 0 }
 
   let hits = 0
   for (const p of Prediction) {
+    const hs = p.match.homeScore!
+    const aw = p.match.awayScore!
     const actual =
-      p.outcome === 'home' ? (p.Match.homeScore > p.Match.awayScore) :
-      p.outcome === 'away' ? (p.Match.awayScore > p.Match.homeScore) :
-      p.outcome === 'draw' ? (p.Match.homeScore === p.Match.awayScore) :
+      p.outcome === 'home' ? (hs > aw) :
+      p.outcome === 'away' ? (aw > hs) :
+      p.outcome === 'draw' ? (hs === aw) :
       false
     if (actual) hits++
   }

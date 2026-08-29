@@ -37,6 +37,22 @@ export type ClubEloRow = {
   to: string | null
 }
 
+export type LeagueOption = {
+  value: string
+  label: string
+}
+
+export type SoccerDataCatalog = {
+  espnLeagues: LeagueOption[]
+  fbrefLeagues: LeagueOption[]
+  sofascoreLeagues: LeagueOption[]
+  understatLeagues: LeagueOption[]
+  whoscoredLeagues: LeagueOption[]
+  sofifaLeagues: LeagueOption[]
+  matchHistoryLeagues: LeagueOption[]
+  clubEloLeagues: LeagueOption[]
+}
+
 export type MatchHistoryRow = {
   league: string
   season: string

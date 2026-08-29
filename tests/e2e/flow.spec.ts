@@ -21,16 +21,20 @@ test.describe('Authenticated user flows', () => {
     await signup(page)
 
     // scrape page reachable
-    await page.goto('/scrape', { waitUntil: 'domcontentloaded' })
-    await expect(page.locator('h1, .display-title')).toContainText(/scrape|harvest/i)
+    await page.goto('/data?tab=scrape', { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('h1, .display-title')).toContainText(/scrape|browse data/i)
 
-    // predict page reachable + Backtest tab works
-    await page.goto('/predict?tab=backtest', { waitUntil: 'domcontentloaded' })
+    // predict page reachable + Backtest tab works via current tab navigation
+    await page.goto('/predict', { waitUntil: 'domcontentloaded' })
+    await Promise.all([
+      page.waitForURL(/\/predict\?tab=backtest/, { timeout: 10_000 }),
+      page.getByRole('link', { name: /backtest/i }).click(),
+    ])
     await expect(page.getByText(/per-model brier scores/i)).toBeVisible({ timeout: 10_000 })
 
-    // ensemble weights compute (no data yet → uniform fallback message)
-    await page.getByRole('button', { name: /^compute$/i }).click()
-    await expect(page.getByText(/falling back to uniform|allocation/i).first()).toBeVisible({
+    // ensemble weights remain guarded until prediction history exists
+    await expect(page.getByRole('button', { name: /^compute$/i })).toBeDisabled()
+    await expect(page.getByText(/derive weights from current brier scores/i)).toBeVisible({
       timeout: 10_000,
     })
 

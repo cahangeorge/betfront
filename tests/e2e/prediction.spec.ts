@@ -20,29 +20,27 @@ test.describe('Prediction target mode validation', () => {
   test('predictions for future matches target unplayed games', async ({ page }) => {
     await signup(page)
 
-    // Navigate to prediction page
+    // Navigate to the current prediction workflow
     await page.goto('/predict?tab=prediction', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('h1, .display-title')).toContainText(/predict/i)
 
-    // Wait for the prediction form to be visible
-    await expect(page.locator('select[name="targetMode"], button:has-text("Run prediction")').first()).toBeVisible({ timeout: 10_000 })
+    // The current workflow defaults to future, unplayed fixtures.
+    await expect(page.getByRole('heading', { name: /select league/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /load historical data/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /select future matches/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /run predictions/i })).toBeVisible()
 
-    // Verify that the default target mode is 'future' (or select it if needed)
-    const targetModeSelect = page.locator('select[name="targetMode"]')
-    if (await targetModeSelect.isVisible()) {
-        await targetModeSelect.selectOption('future')
-    }
+    const upcomingOnly = page.getByRole('checkbox', { name: /upcoming matches only/i })
+    await expect(upcomingOnly).toBeChecked()
 
-    // Trigger a prediction run (we expect this to potentially fail if no future matches exist, but we verify the request/query)
-    // NOTE: Depending on the UI implementation, we might need to fill other fields first.
-    // This test assumes a button click initiates the process.
-    const runButton = page.getByRole('button', { name: /run prediction/i }).first()
-    if (await runButton.isVisible()) {
-        await runButton.click()
-    }
+    // Exercise the future-match targeting toggle and confirm it returns to the default.
+    await upcomingOnly.uncheck()
+    await expect(upcomingOnly).not.toBeChecked()
+    await upcomingOnly.check()
+    await expect(upcomingOnly).toBeChecked()
 
-    // In a real scenario, we would intercept the network request to verify the backend receives 'future' mode.
-    // For this basic E2E, we check that no error about 'historical' mode immediately flashes.
-    await expect(page.locator('text=/historical|history|past/i').first()).not.toBeVisible({ timeout: 5_000 })
+    // Without a selected league/history load, the workflow should prevent fetching matches.
+    await expect(page.getByRole('button', { name: /load history/i })).toBeDisabled()
+    await expect(page.getByRole('button', { name: /load matches/i })).toBeDisabled()
   })
 })

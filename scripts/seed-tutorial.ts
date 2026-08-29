@@ -9,7 +9,7 @@ const adapter = new PrismaBetterSqlite3({
 const prisma = new PrismaClient({ adapter })
 
 const today = new Date()
-const futureDate = (d) => {
+const futureDate = (d: number) => {
   const x = new Date(today)
   x.setDate(x.getDate() + d)
   return x.toISOString().slice(0, 10)
@@ -25,7 +25,7 @@ const FIXTURES = [
 ]
 
 // Convert probability to odds with a small bookmaker margin
-const toOdds = (p, margin = 0.06) => Math.round((1 / (p * (1 + margin))) * 100) / 100
+const toOdds = (p: number, margin = 0.06) => Math.round((1 / (p * (1 + margin))) * 100) / 100
 
 async function main() {
   console.log('Seeding tutorial data…')
