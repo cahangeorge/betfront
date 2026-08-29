@@ -358,7 +358,7 @@ export async function getPredictionSessions() {
     }))
 
     const runSessions = runs
-      .map((run) => mapPredictionRunToHistorySession(run))
+      .map((run) => mapPredictionRunToHistorySession({ ...run, source: run.source as 'single' | 'ensemble' }))
       .filter((run): run is HistorySessionWithStats => run != null)
 
     return [...legacySessions, ...runSessions].sort(

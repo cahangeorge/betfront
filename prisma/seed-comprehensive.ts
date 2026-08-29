@@ -366,7 +366,7 @@ async function seed() {
       const placement = await prisma.betPlacement.create({
         data: {
           ticketId: ticket.id,
-          bookmakerAccountId: (await prisma.bookmakerAccount.findFirst({ where: { bankrollId: mainBankroll.id } })).id,
+          bookmakerAccountId: (await prisma.bookmakerAccount.findFirst({ where: { bankrollId: mainBankroll.id } }))?.id ?? 1,
           stake: ticket.stake,
           status: t % 3 === 2 ? 'settled' : 'placed',
         },

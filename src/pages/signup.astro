@@ -4,8 +4,8 @@ import { AuthForm } from '#/components/AuthForm';
 
 if (Astro.locals.user) return Astro.redirect('/');
 
-const next = new URL(Astro.request.url).searchParams.get('next') ?? '/';
-if (next === '/') next = '/';
+let next = new URL(Astro.request.url).searchParams.get('next') ?? '/';
+if (next === '/') next = '/';;
 ---
 
 <Layout title="Betfront — Sign up">

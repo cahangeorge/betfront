@@ -34,3 +34,7 @@ dev.db-journal
 
 # test results
 test-results/
+
+# Python bridge caches
+__pycache__/
+*.pyc

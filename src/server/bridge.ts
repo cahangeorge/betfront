@@ -62,7 +62,7 @@ export async function runBridge<T>(
         const parsed = JSON.parse(text) as BridgeResult<T>
         await unlink(outputPath).catch(() => undefined)
         if (!parsed.ok || code !== 0) {
-          reject(new Error(parsed.error ?? (stderr.trim() || `${label} bridge failed`)))
+          reject(new Error((parsed as { ok: false; error: string }).error ?? (stderr.trim() || `${label} bridge failed`)))
           return
         }
         resolve(parsed.result as T)
